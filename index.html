@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Are You Ready to Live in Arizona? 🌵</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #ff6b35, #f7931e, #ffcc02);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        .cactus {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.3;
+            z-index: 0;
+            animation: sway 4s ease-in-out infinite;
+        }
+        
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 10;
+        }
+        
+        h1 {
+            color: #d2691e;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #8b4513;
+            margin-bottom: 30px;
+            font-style: italic;
+            font-size: 1.2rem;
+        }
+        
+        .question {
+            background: linear-gradient(45deg, #ffe4b5, #ffd700);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 3px solid #ff6b35;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .question.active {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .question h3 {
+            color: #8b0000;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+        
+        .options {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .option {
+            background: #fff;
+            border: 2px solid #ff6b35;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        .option:hover {
+            background: #ff6b35;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .option.selected {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .navigation {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            display: none;
+            text-align: center;
+            background: linear-gradient(45deg, #98fb98, #90ee90);
+            border-radius: 15px;
+            padding: 30px;
+            border: 3px solid #228b22;
+        }
+        
+        .results.show {
+            display: block;
+            animation: bounce 0.8s ease-out;
+        }
+        
+        @keyframes bounce {
+            0% { transform: scale(0.3) rotate(-5deg); opacity: 0; }
+            50% { transform: scale(1.1) rotate(2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        
+        .progress {
+            background: #ddd;
+            border-radius: 10px;
+            height: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+        
+        .thermometer {
+            font-size: 2rem;
+            margin: 0 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .restart-btn {
+            background: linear-gradient(45deg, #32cd32, #228b22);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cactus" style="top: 10%; left: 5%;">🌵</div>
+    <div class="cactus" style="top: 60%; right: 8%;">🌵</div>
+    <div class="cactus" style="top: 80%; left: 10%;">🌵</div>
+    <div class="cactus" style="top: 30%; right: 15%;">🌵</div>
+
+    <div class="container">
+        <h1>🌵 Are You Ready to Live in Arizona? 🔥</h1>
+        <p class="subtitle">The Ultimate Desert Survival Quiz</p>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div id="questions">
+            <div class="question active" data-question="0">
+                <h3>1. What's your ideal temperature for a nice day outside?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">65-75°F (18-24°C) - Perfect sweater weather! 🧥</div>
+                    <div class="option" data-points="1">80-90°F (27-32°C) - Warm and pleasant ☀️</div>
+                    <div class="option" data-points="2">95-105°F (35-40°C) - Toasty and wonderful! 🌡️</div>
+                    <div class="option" data-points="3">115°F+ (46°C+) - The hotter the better! I AM THE SUN! 🔥</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="1">
+                <h3>2. How do you feel about wildlife encounters?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">I prefer my nature on National Geographic 📺</div>
+                    <div class="option" data-points="1">Cute animals are fine, scary ones can stay away 🐱</div>
+                    <div class="option" data-points="2">Bring on the lizards and roadrunners! 🦎</div>
+                    <div class="option" data-points="3">Rattlesnakes, scorpions, javelinas - we're all just neighbors! 🐍🦂</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="2">
+                <h3>3. Your air conditioning breaks in July. What's your reaction?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">Call 911, the fire department, and my mom 📞</div>
+                    <div class="option" data-points="1">Panic, then immediately book a hotel 🏨</div>
+                    <div class="option" data-points="2">Grab some fans and tough it out 💨</div>
+                    <div class="option" data-points="3">This is fine. I am made of lava anyway 🌋</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="3">
+                <h3>4. How do you handle driving in extreme heat?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">Oven mitts for the steering wheel, right? 🧤</div>
+                    <div class="option" data-points="1">Pre-cool the car for 20 minutes before getting in ❄️</div>
+                    <div class="option" data-points="2">Window shades and seat covers are my best friends 🚗</div>
+                    <div class="option" data-points="3">Bare hands on molten metal steering wheel - builds character! 💪</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="4">
+                <h3>5. What's your stance on outdoor activities in summer?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">The indoors was invented for a reason 🏠</div>
+                    <div class="option" data-points="1">Maybe early morning or late evening... maybe 🌅</div>
+                    <div class="option" data-points="2">Hiking at dawn, swimming at dusk 🥾🏊</div>
+                    <div class="option" data-points="3">Noon desert hikes in July? Challenge accepted! ☀️⛰️</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="5">
+                <h3>6. How much water do you drink daily?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">Coffee counts as water, right? ☕</div>
+                    <div class="option" data-points="1">The recommended 8 glasses 💧</div>
+                    <div class="option" data-points="2">A gallon or more - hydration station! 🚰</div>
+                    <div class="option" data-points="3">I AM 90% WATER. I photosynthesis moisture from the air 🌊</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="6">
+                <h3>7. Your ideal vacation destination?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">Alaska in winter ❄️🐧</div>
+                    <div class="option" data-points="1">Somewhere with four distinct seasons 🍂🌸</div>
+                    <div class="option" data-points="2">Tropical beaches and desert resorts 🏖️🌴</div>
+                    <div class="option" data-points="3">The surface of Mercury (too cold though) 🪐</div>
+                </div>
+            </div>
+
+            <div class="question" data-question="7">
+                <h3>8. How do you feel about monsoon season?</h3>
+                <div class="options">
+                    <div class="option" data-points="0">Mon-soon? Is that a type of spoon? 🥄</div>
+                    <div class="option" data-points="1">Rain sounds nice, but what's all this about dust storms? 🌪️</div>
+                    <div class="option" data-points="2">Bring on the dramatic weather and lightning shows! ⚡</div>
+                    <div class="option" data-points="3">Haboobs are nature's way of exfoliating. I embrace the dust! 🌪️💨</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button class="btn" id="prevBtn" onclick="changeQuestion(-1)" disabled>Previous</button>
+            <button class="btn" id="nextBtn" onclick="changeQuestion(1)" disabled>Next</button>
+            <button class="btn" id="submitBtn" onclick="showResults()" style="display: none;">Get My Results!</button>
+        </div>
+
+        <div class="results" id="results">
+            <h2 id="resultTitle"></h2>
+            <div id="resultContent"></div>
+            <button class="btn restart-btn" onclick="restartQuiz()">Take Quiz Again!</button>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestion = 0;
+        let answers = [];
+        const totalQuestions = 8;
+
+        function updateProgress() {
+            const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function selectOption(element) {
+            // Remove previous selection
+            const options = element.parentNode.querySelectorAll('.option');
+            options.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selection to clicked option
+            element.classList.add('selected');
+            
+            // Store answer
+            answers[currentQuestion] = parseInt(element.dataset.points);
+            
+            // Enable next button
+            document.getElementById('nextBtn').disabled = false;
+            if (currentQuestion === totalQuestions - 1) {
+                document.getElementById('submitBtn').style.display = 'inline-block';
+            }
+        }
+
+        function changeQuestion(direction) {
+            const questions = document.querySelectorAll('.question');
+            questions[currentQuestion].classList.remove('active');
+            
+            currentQuestion += direction;
+            
+            if (currentQuestion < 0) currentQuestion = 0;
+            if (currentQuestion >= totalQuestions) currentQuestion = totalQuestions - 1;
+            
+            questions[currentQuestion].classList.add('active');
+            
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentQuestion === 0;
+            document.getElementById('nextBtn').disabled = answers[currentQuestion] === undefined || currentQuestion === totalQuestions - 1;
+            
+            if (currentQuestion === totalQuestions - 1 && answers[currentQuestion] !== undefined) {
+                document.getElementById('submitBtn').style.display = 'inline-block';
+                document.getElementById('nextBtn').style.display = 'none';
+            } else {
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'inline-block';
+            }
+            
+            updateProgress();
+        }
+
+        function showResults() {
+            const totalScore = answers.reduce((sum, score) => sum + score, 0);
+            const maxScore = totalQuestions * 3;
+            const percentage = (totalScore / maxScore) * 100;
+            
+            let title, content, thermometer;
+            
+            if (percentage < 25) {
+                title = "🧊 Arctic Explorer 🧊";
+                thermometer = "🧊❄️⛄";
+                content = `
+                    <div style="font-size: 1.2rem; margin-bottom: 20px;">${thermometer}</div>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Score: ${totalScore}/${maxScore} (${Math.round(percentage)}%)</strong></p>
+                    <p>Arizona might melt you faster than an ice cube on hot asphalt! You're more suited for igloos than adobe houses. Maybe consider Alaska, Antarctica, or that nice air-conditioned movie theater down the street. But hey, our winters are your summers! Visit us in January when it's a "freezing" 70°F! 🏔️</p>
+                `;
+            } else if (percentage < 50) {
+                title = "🌡️ Temperature Trainee 🌡️";
+                thermometer = "❄️🌡️☀️";
+                content = `
+                    <div style="font-size: 1.2rem; margin-bottom: 20px;">${thermometer}</div>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Score: ${totalScore}/${maxScore} (${Math.round(percentage)}%)</strong></p>
+                    <p>You could survive in Arizona, but you'd probably spend your first summer hiding indoors wondering why you moved to the surface of the sun. With proper preparation (industrial-strength sunscreen, a really good AC unit, and accepting that 6 AM is the new noon), you might just make it! Stock up on electrolytes! ⚡</p>
+                `;
+            } else if (percentage < 75) {
+                title = "🌵 Desert Dweller Material 🌵";
+                thermometer = "☀️🌡️🔥";
+                content = `
+                    <div style="font-size: 1.2rem; margin-bottom: 20px;">${thermometer}</div>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Score: ${totalScore}/${maxScore} (${Math.round(percentage)}%)</strong></p>
+                    <p>Welcome to the desert, future Arizonan! You've got the heat tolerance and survival instincts to thrive among the cacti and roadrunners. You understand that pool parties in July happen at midnight, and you know the difference between "dry heat" and "I'm literally cooking." Pack your sunglasses and join us! 🕶️</p>
+                `;
+            } else {
+                title = "🔥 DESERT DEITY 🔥";
+                thermometer = "🔥🌋☀️🔥";
+                content = `
+                    <div style="font-size: 1.2rem; margin-bottom: 20px;">${thermometer}</div>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Score: ${totalScore}/${maxScore} (${Math.round(percentage)}%)</strong></p>
+                    <p>You don't just belong in Arizona - Arizona belongs to YOU! You're basically a human cactus who probably considers 120°F "sweater weather." The desert spirits have been waiting for your arrival. Javelinas bow in your presence. You make the sun feel inadequate. Welcome home, oh mighty desert warrior! 🏜️👑</p>
+                `;
+            }
+            
+            document.getElementById('resultTitle').innerHTML = title;
+            document.getElementById('resultContent').innerHTML = content;
+            document.getElementById('questions').style.display = 'none';
+            document.querySelector('.navigation').style.display = 'none';
+            document.getElementById('results').classList.add('show');
+        }
+
+        function restartQuiz() {
+            currentQuestion = 0;
+            answers = [];
+            
+            // Reset all questions
+            const questions = document.querySelectorAll('.question');
+            questions.forEach((q, index) => {
+                q.classList.remove('active');
+                if (index === 0) q.classList.add('active');
+                
+                // Clear selections
+                q.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+            });
+            
+            // Reset UI
+            document.getElementById('questions').style.display = 'block';
+            document.querySelector('.navigation').style.display = 'block';
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('prevBtn').disabled = true;
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            document.getElementById('submitBtn').style.display = 'none';
+            
+            updateProgress();
+        }
+
+        // Add click event listeners to all options
+        document.addEventListener('DOMContentLoaded', function() {
+            const options = document.querySelectorAll('.option');
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    selectOption(this);
+                });
+            });
+            updateProgress();
+        });
+    </script>
+</body>
+</html>
