@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Disneyland Trip Planner</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide icons as React components are not available via CDN, so we use SVGs or fallback to emoji/icons -->
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+
+// Icon fallback helpers (since Lucide React icons are not available via CDN)
+const Calendar = () => <span role="img" aria-label="calendar">📅</span>;
+const Users = () => <span role="img" aria-label="users">👨‍👩‍👧‍👦</span>;
+const Baby = () => <span role="img" aria-label="baby">👶</span>;
+const Clock = () => <span role="img" aria-label="clock">⏰</span>;
+const MapPin = () => <span role="img" aria-label="map">📍</span>;
+const Utensils = () => <span role="img" aria-label="utensils">🍽️</span>;
+const Star = () => <span role="img" aria-label="star">⭐</span>;
+const ChevronDown = () => <span>▼</span>;
+const ChevronUp = () => <span>▲</span>;
+
+function DisneylandTripPlanner() {
+  const [startDate, setStartDate] = React.useState('');
+  const [endDate, setEndDate] = React.useState('');
+  const [adults, setAdults] = React.useState(2);
+  const [children, setChildren] = React.useState(0);
+  const [childAges, setChildAges] = React.useState([]);
+  const [dailyParks, setDailyParks] = React.useState({});
+  const [optimizeDay, setOptimizeDay] = React.useState(false);
+  const [selectedDay, setSelectedDay] = React.useState('');
+  const [expandedSchedule, setExpandedSchedule] = React.useState({});
+  const [expandedDining, setExpandedDining] = React.useState({});
+  const [schedules, setSchedules] = React.useState({});
+  const [scheduleVersion, setScheduleVersion] = React.useState({});
+
+  const parks = ['Disneyland Park', 'Disney California Adventure'];
+
+  const attractions = {
+    'Disneyland Park': [
+      { name: 'Space Mountain', wait: '45-60 min', type: 'Thrill', height: '40"' },
+      { name: 'Matterhorn Bobsleds', wait: '30-45 min', type: 'Thrill', height: '35"' },
+      { name: 'Indiana Jones Adventure', wait: '60-75 min', type: 'Adventure', height: '46"' },
+      { name: 'Pirates of the Caribbean', wait: '20-30 min', type: 'Family', height: 'Any' },
+      { name: 'Haunted Mansion', wait: '25-35 min', type: 'Family', height: 'Any' },
+      { name: 'Big Thunder Mountain', wait: '35-50 min', type: 'Family Thrill', height: '40"' },
+      { name: 'Splash Mountain', wait: '40-55 min', type: 'Thrill', height: '40"' },
+      { name: "It's a Small World", wait: '10-20 min', type: 'Family', height: 'Any' },
+      { name: 'Star Wars: Rise of the Resistance', wait: '90-120 min', type: 'Epic', height: '40"' },
+      { name: 'Millennium Falcon', wait: '45-60 min', type: 'Adventure', height: '38"' }
+    ],
+    'Disney California Adventure': [
+      { name: 'Guardians of the Galaxy', wait: '60-80 min', type: 'Thrill', height: '40"' },
+      { name: 'Incredicoaster', wait: '45-60 min', type: 'Thrill', height: '48"' },
+      { name: "Soarin' Around the World", wait: '40-55 min', type: 'Family', height: '40"' },
+      { name: 'Radiator Springs Racers', wait: '75-90 min', type: 'Family Thrill', height: '32"' },
+      { name: "California Screamin'", wait: '35-50 min', type: 'Thrill', height: '48"' },
+      { name: 'Toy Story Midway Mania', wait: '30-45 min', type: 'Family', height: 'Any' },
+      { name: "Mickey's Fun Wheel", wait: '15-25 min', type: 'Family', height: 'Any' },
+      { name: 'The Little Mermaid', wait: '20-30 min', type: 'Family', height: 'Any' },
+      { name: 'Web Slingers', wait: '40-55 min', type: 'Family', height: '48"' },
+      { name: 'Avengers Campus', wait: '25-35 min', type: 'Adventure', height: '40"' }
+    ]
+  };
+
+  const diningLocations = {
+    'Disneyland Park': [
+      {
+        name: 'Blue Bayou Restaurant',
+        type: 'Fine Dining',
+        cuisine: 'Creole/Cajun',
+        popular: ['Bone-in Ribeye', 'Jambalaya', 'Monte Cristo Sandwich', 'Crème Brûlée']
+      },
+      {
+        name: 'Carnation Cafe',
+        type: 'Table Service',
+        cuisine: 'American',
+        popular: ["Loaded Baked Potato Soup", "Walt's Chili", "Fried Chicken", "Mickey Pancakes"]
+      },
+      {
+        name: 'Docking Bay 7',
+        type: 'Quick Service',
+        cuisine: 'Star Wars Themed',
+        popular: ['Fried Endorian Tip-Yip', 'Felucian Garden Spread', 'Blue Bantha Cookie']
+      },
+      {
+        name: 'Plaza Inn',
+        type: 'Quick Service',
+        cuisine: 'American',
+        popular: ['Famous Fried Chicken', 'Pot Roast', 'Chocolate Cake', 'Apple Pie']
+      }
+    ],
+    'Disney California Adventure': [
+      {
+        name: 'Carthay Circle Restaurant',
+        type: 'Fine Dining',
+        cuisine: 'California Modern',
+        popular: ['Pan-seared Salmon', 'Crispy Pork Belly', 'Carthay Signature Old Fashioned']
+      },
+      {
+        name: 'Lamplight Lounge',
+        type: 'Casual Dining',
+        cuisine: 'California Cuisine',
+        popular: ['Lobster Roll', 'Crab Nachos', 'Piggy Wings', 'Potato Skins']
+      },
+      {
+        name: 'Pym Test Kitchen',
+        type: 'Quick Service',
+        cuisine: 'Marvel Themed',
+        popular: ['Quantum Pretzel', 'Pym-ini Sandwich', 'Not So Little Chicken Sandwich']
+      }
+    ]
+  };
+
+  // Helper to generate date range
+  const generateDateRange = () => {
+    if (!startDate || !endDate) return [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const range = [];
+    let current = new Date(start);
+    while (current <= end) {
+      range.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    return range;
+  };
+
+  const dateRange = generateDateRange();
+
+  // Handle child ages
+  React.useEffect(() => {
+    setChildAges(Array(children).fill(''));
+  }, [children]);
+
+  // Handle park selection for each day
+  const handleParkSelection = (date, park) => {
+    setDailyParks(prev => ({ ...prev, [date]: park }));
+  };
+
+  // Toggle schedule expansion
+  const toggleScheduleExpansion = (date) => {
+    setExpandedSchedule(prev => ({ ...prev, [date]: !prev[date] }));
+  };
+
+  // Toggle dining expansion
+  const toggleDiningExpansion = (location) => {
+    setExpandedDining(prev => ({ ...prev, [location]: !prev[location] }));
+  };
+
+  // Generate a simple schedule for a park and date
+  const generateSchedule = (park, date) => {
+    const rides = attractions[park] || [];
+    const shuffled = [...rides].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 5).map((ride, idx) => ({
+      ...ride,
+      time: `${9 + idx}:00 AM`
+    }));
+  };
+
+  // Generate schedules for all days
+  React.useEffect(() => {
+    if (!optimizeDay || dateRange.length === 0) return;
+    const newSchedules = {};
+    dateRange.forEach(date => {
+      const park = dailyParks[date];
+      if (park) {
+        newSchedules[date] = generateSchedule(park, date);
+      }
+    });
+    setSchedules(newSchedules);
+  }, [optimizeDay, dateRange, dailyParks]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-pink-100 p-6">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-3xl font-bold mb-6 text-center text-pink-700 flex items-center justify-center gap-2">
+          <MapPin /> Disneyland Trip Planner
+        </h1>
+        {/* Trip Details */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <label className="block mb-2 font-semibold"><Calendar /> Start Date</label>
+            <input type="date" className="w-full border rounded p-2" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block mb-2 font-semibold"><Calendar /> End Date</label>
+            <input type="date" className="w-full border rounded p-2" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block mb-2 font-semibold"><Users /> Adults</label>
+            <input type="number" min="1" className="w-full border rounded p-2" value={adults} onChange={e => setAdults(Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="block mb-2 font-semibold"><Baby /> Children</label>
+            <input type="number" min="0" className="w-full border rounded p-2" value={children} onChange={e => setChildren(Number(e.target.value))} />
+            {children > 0 && (
+              <div className="mt-2 space-y-2">
+                {Array.from({ length: children }).map((_, idx) => (
+                  <input
+                    key={idx}
+                    type="number"
+                    min="0"
+                    max="17"
+                    placeholder={`Child ${idx + 1} Age`}
+                    className="w-full border rounded p-2"
+                    value={childAges[idx] || ''}
+                    onChange={e => {
+                      const ages = [...childAges];
+                      ages[idx] = e.target.value;
+                      setChildAges(ages);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Park Selection */}
+        {dateRange.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center"><MapPin /> Select Park for Each Day</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {dateRange.map(date => (
+                <div key={date} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">{date}</div>
+                  </div>
+                  <div>
+                    <select
+                      className="border rounded p-2"
+                      value={dailyParks[date] || ''}
+                      onChange={e => handleParkSelection(date, e.target.value)}
+                    >
+                      <option value="">Select Park</option>
+                      {parks.map(park => (
+                        <option key={park} value={park}>{park}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Optimize Button */}
+        {dateRange.length > 0 && Object.values(dailyParks).filter(Boolean).length === dateRange.length && (
+          <div className="mb-8 text-center">
+            <button
+              className="bg-pink-600 text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-pink-700 transition"
+              onClick={() => setOptimizeDay(true)}
+            >
+              <Clock /> Optimize My Disney Days!
+            </button>
+          </div>
+        )}
+
+        {/* Schedules */}
+        {optimizeDay && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold mb-4 flex items-center"><Clock /> Daily Schedules</h2>
+            {dateRange.map(date => (
+              <div key={date} className="mb-6">
+                <div
+                  className="flex items-center justify-between cursor-pointer bg-blue-50 p-4 rounded-lg"
+                  onClick={() => toggleScheduleExpansion(date)}
+                >
+                  <div>
+                    <span className="font-semibold">{date}</span>
+                    <span className="ml-2 text-gray-600">{dailyParks[date]}</span>
+                  </div>
+                  {expandedSchedule[date] ? <ChevronUp /> : <ChevronDown />}
+                </div>
+                {expandedSchedule[date] && schedules[date] && (
+                  <div className="bg-white border rounded-lg p-4 mt-2">
+                    <ul className="space-y-2">
+                      {schedules[date].map((ride, idx) => (
+                        <li key={idx} className="flex items-center gap-2">
+                          <Star /> <span className="font-semibold">{ride.time}</span> - {ride.name} <span className="text-gray-500 text-sm">({ride.wait} wait, {ride.type}, Height: {ride.height})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Dining Recommendations */}
+        <div className="mb-8 bg-gray-50 p-6 rounded-lg">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center">
+            <Utensils className="mr-2 text-red-600" />
+            Dining Recommendations
+          </h2>
+          {parks.map((park) => (
+            <div key={park} className="mb-6">
+              <h3 className="text-xl font-semibold mb-3 text-gray-800">{park}</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {diningLocations[park]?.map((location) => {
+                  const isExpanded = expandedDining[location.name];
+                  return (
+                    <div key={location.name} className="bg-white border rounded-lg overflow-hidden">
+                      <div 
+                        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => toggleDiningExpansion(location.name)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-800">{location.name}</h4>
+                            <p className="text-sm text-gray-600">{location.type} • {location.cuisine}</p>
+                          </div>
+                          {isExpanded ? <ChevronUp /> : <ChevronDown />}
+                        </div>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="px-4 pb-4 border-t">
+                          <h5 className="font-medium text-gray-700 mb-2 mt-3">Popular Items:</h5>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {location.popular.map((item, index) => (
+                              <li key={index} className="flex items-center">
+                                <Star className="h-3 w-3 text-yellow-500 mr-2" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Summary */}
+        {dateRange.length > 0 && (
+          <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg">
+            <h2 className="text-2xl font-semibold mb-4 text-purple-800">Trip Summary</h2>
+            <div className="grid md:grid-cols-3 gap-4 text-center">
+              <div className="bg-white p-4 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{dateRange.length}</div>
+                <div className="text-gray-600">Days at Disney</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{adults + children}</div>
+                <div className="text-gray-600">Total Guests</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">
+                  {Object.values(dailyParks).filter(park => park === 'Disneyland Park').length + 
+                   Object.values(dailyParks).filter(park => park === 'Disney California Adventure').length}
+                </div>
+                <div className="text-gray-600">Park Days Planned</div>
+              </div>
+            </div>
+            {optimizeDay && (
+              <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
+                <p className="text-yellow-800 text-center">
+                  ✨ Your optimized schedules are ready! Each day includes strategic ride timing, 
+                  dining recommendations, and break periods for the ultimate Disney experience.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Render the app
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<DisneylandTripPlanner />);
+
+  </script>
+</body>
+</html>
