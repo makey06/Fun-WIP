@@ -1,151 +1,161 @@
-# To‑Do + SUSD Calendar (Vanilla JS, No Deps)
+# To-Do + SUSD Calendar
 
-A self‑contained web app that combines a **taggable to‑do list** with a **district calendar**. Built with **vanilla JavaScript**, pure CSS, and `localStorage` for persistence — no frameworks or external dependencies.
-
-> This README summarizes the architecture and features of `ToDoCalendar_v1.html` and includes Mermaid diagrams that render on GitHub.
-
----
-
-## Quick Start
-
-1. Open `ToDoCalendar_v1.html` in any modern browser.
-2. Add tasks on the left; navigate the SUSD calendar on the right.
-3. Your data persists in `localStorage`. Use **Advanced → Export JSON** for backups, and **Import** to merge or replace.
-
----
+A comprehensive task management application with an integrated Scottsdale Unified School District (SUSD) calendar viewer. This is a standalone HTML application that requires no external dependencies and stores data locally in your browser.
 
 ## Features
 
-- **Task management:** add, tag, write notes, complete, delete; group by tag. fileciteturn1file11L3-L16
-- **Completed filters:** this week, month, year, or custom date range. fileciteturn1file11L35-L45 fileciteturn1file13L1-L8
-- **Calendar:** month grid with tooltips and colored event dots (first day, last day, early release, no school). fileciteturn1file7L18-L25 fileciteturn1file7L38-L38
-- **SUSD events preloaded for 2025–2026.** fileciteturn1file9L10-L21
-- **Import/Export/Reset:** JSON export, conflict‑aware import (merge/replace, keep/overwrite), full reset with confirm. fileciteturn1file12L1-L8 fileciteturn1file12L10-L21
-- **Persistent UI:** dark mode toggle and resizable split‑pane saved in `localStorage`. fileciteturn1file6L31-L37 fileciteturn1file16L1-L9
-- **Responsive layout:** stacks to one column on small screens. fileciteturn1file3L27-L31
+### Task Management
+- **Add Tasks**: Create tasks with optional tags and notes
+- **Task Organization**: 
+  - Filter tasks by tags or show all
+  - Group tasks by tags for better organization
+  - Separate views for active and completed tasks
+- **Task Details**: Each task includes timestamps for creation and completion
+- **Notes**: Add detailed notes to any task with inline editing
+- **Smart Filtering**: Filter completed tasks by time periods (week, month, year, or custom range)
 
----
+### SUSD School Calendar Integration
+- **Academic Year 2025-2026**: Pre-loaded with official SUSD dates
+- **Event Types**:
+  - 🟢 First/Last day of school
+  - 🔴 No school days
+  - 🟣 Early release days
+  - 🩷 Conference early release days
+- **Interactive Calendar**: 
+  - Navigate between months
+  - Hover over dates to see event details
+  - Visual indicators for different event types
+  - "Today" highlighting
 
-## Architecture Overview
+### Data Management
+- **Local Storage**: All data stored in browser's localStorage
+- **Import/Export**: 
+  - Export tasks as JSON files
+  - Import tasks with merge or replace options
+  - Conflict resolution for duplicate task IDs
+- **Data Persistence**: Automatically saves changes
 
-### Rendering & State Flow
+### User Interface
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Dark Theme**: Optimized for readability with high contrast
+- **Resizable Panels**: Drag the splitter to adjust layout on desktop
+- **Keyboard Shortcuts**: Enter key to quickly add tasks
 
-- `state` holds `{ tasks, tags }`; `ui` holds view settings (filters, month/year, dark, panel width). fileciteturn1file6L14-L25
-- `setState(mut)` persists to `localStorage` and triggers `render()`. fileciteturn1file6L27-L27
-- **Actions** drive all mutations (add/toggle/delete/update/clear tasks, import/export, calendar nav, theme). fileciteturn1file6L29-L37 fileciteturn1file2L1-L7
+## Usage
 
-```mermaid
-flowchart TD
-  A[User input<br/>clicks/typing] --> B[Actions]
-  B -->|mutate| C[setState(mut)]
-  C -->|persist| D[localStorage]
-  C -->|re-render| E[render()]
-  E --> F[UI Components]
-  F -->|events| B
+### Getting Started
+1. Open the HTML file in any modern web browser
+2. Start adding tasks using the form in the left panel
+3. View the SUSD calendar in the right panel
 
-  subgraph Actions
-    addTask --> toggleTask --> deleteTask --> updateNotes --> clearCompleted
-    exportJSON --> importFromObject --> calPrev --> calNext --> calToday --> toggleDark
-  end
-```
-> The `setState` function saves state and triggers `render()`, ensuring a simple one‑way data flow. fileciteturn1file0L1-L9
+### Adding Tasks
+1. Enter task name in the input field
+2. Optionally select an existing tag or create a new one
+3. Add notes if needed
+4. Click "Add Task" or press Enter
 
-### Component Tree (Conceptual)
+### Managing Tasks
+- **Complete**: Check the checkbox next to any task
+- **Edit Notes**: Click in the notes area and edit inline
+- **Delete**: Click the ✕ button on any task
+- **Filter**: Use the tag dropdown to filter by specific tags
+- **Group**: Enable "Group by tag" to organize tasks by their tags
 
-```mermaid
-mindmap
-  root((App))
-    Left Panel
-      "New Task Form"
-      "Active Tasks"
-        "Tag Filter / Group"
-        "TaskItem xN"
-      "Completed Tasks"
-        "Filters (week/month/year/custom)"
-        "Tag Filter / Group"
-      "Advanced"
-        "Export JSON"
-        "Import (merge/replace; keep/overwrite)"
-        "Reset App"
-    Right Panel
-      "SUSD Calendar"
-        "Month Header & Nav (‹ Today ›)"
-        "Grid (7x6)"
-        "Event dots + tooltips"
-        "Legend"
-```
-- **TaskItem** shows checkbox, name, tag chip, timestamp, delete, and inline notes. fileciteturn1file11L7-L16 fileciteturn1file11L17-L33
-- **Completed filtering** adjusts the completed list at render time. fileciteturn1file10L3-L12
-- **Calendar panel** computes the month grid, attaches hover tooltips, and shows a legend. fileciteturn1file8L10-L18 fileciteturn1file7L25-L33 fileciteturn1file1L14-L16
+### Calendar Navigation
+- Use ‹ and › buttons to navigate months
+- Click "Today" to jump to current month
+- Hover over dates with events to see details
 
----
+### Data Management
+1. **Export**: Click "Export JSON" to download your tasks
+2. **Import**: Use "Choose File…" in Advanced section
+   - **Merge**: Combines with existing tasks (recommended)
+   - **Replace**: Completely replaces current data
+3. **Reset**: "Reset App" clears all data (requires confirmation)
 
-## Data Model
+## Technical Details
 
-### Task
-```ts
-type Task = {
-  id: string
-  name: string
-  tag: string | null
-  notes: string
-  created_at: number
-  completed_at: number | null
-  is_completed: 0 | 1
+### Storage
+- Uses browser localStorage with key `todo_local_state_v1`
+- UI preferences stored separately
+- No server or external dependencies required
+
+### Data Structure
+```json
+{
+  "tasks": [
+    {
+      "id": "unique-id",
+      "name": "Task name",
+      "tag": "optional-tag",
+      "notes": "Optional notes",
+      "created_at": 1234567890,
+      "completed_at": null,
+      "is_completed": 0
+    }
+  ],
+  "tags": ["tag1", "tag2"]
 }
 ```
-- Minimal validation is applied on import. fileciteturn1file5L29-L34
 
-### App State
-```ts
-type AppState = {
-  tasks: Task[]
-  tags: string[]
-}
+### Browser Compatibility
+- Modern browsers with ES6+ support
+- localStorage support required
+- No Internet connection needed after initial load
+
+### File Structure
+- Single HTML file with embedded CSS and JavaScript
+- No external dependencies or CDN requirements
+- Fully self-contained application
+
+## SUSD Calendar Data
+
+The application includes pre-loaded data for the 2025-2026 academic year:
+- First day: August 4, 2025
+- Last day: May 22, 2026 (Early Release)
+- Major breaks: Fall break, Thanksgiving, Winter break, Spring break
+- Professional development days and early release schedules
+
+## Customization
+
+### Modifying School Events
+To update or change the calendar data, modify the `SUSD_EVENTS` object in the JavaScript section:
+
+```javascript
+const SUSD_EVENTS = {
+  '2025-08': [
+    {type: 'first_day', days: [4]},
+    {type: 'early_release', days: [27]}
+  ],
+  // Add more months as needed
+};
 ```
-- Stored under `todo_local_state_v1` in `localStorage`. fileciteturn1file5L17-L25 fileciteturn1file5L35-L38
 
----
+### Styling
+The application uses CSS custom properties (variables) for theming. Modify the `:root` section to customize colors and spacing.
 
-## Import / Export
+## Privacy & Security
+- All data stored locally in your browser
+- No data transmitted to external servers
+- No user tracking or analytics
+- Works completely offline
 
-- **Export**: Downloads a timestamped `todo-export-<ISO>.json`. fileciteturn1file0L11-L12
-- **Import**:
-  - **Merge** (recommended): de‑dupes by `id`, optional overwrite of duplicates. fileciteturn1file12L11-L14
-  - **Replace**: confirmation required; fully overwrites current state. fileciteturn1file12L15-L18
-  - Merge summary previews approximate changes before proceeding. fileciteturn1file12L1-L3
-- **Conflict policy**: `keep` (default) or `overwrite` for duplicates. fileciteturn1file0L12-L12
+## Troubleshooting
 
----
+### Data Not Saving
+- Ensure localStorage is enabled in your browser
+- Check if you're in private/incognito mode (may limit storage)
+- Try exporting data as backup before troubleshooting
 
-## Calendar
+### Calendar Not Displaying Correctly
+- Ensure JavaScript is enabled
+- Try refreshing the page
+- Check browser console for any error messages
 
-- Monthly grid is computed from the selected year/month; today is outlined. fileciteturn1file7L15-L16
-- Events per day are looked up from `SUSD_EVENTS[YYYY-MM]` and rendered as dots; tooltips show labels. fileciteturn1file7L11-L14 fileciteturn1file7L25-L33
-- Event legend covers: First Day, Last Day, No School, Early Release, Conf. Early Release. fileciteturn1file7L38-L38
+### Import Issues
+- Verify JSON file format matches expected structure
+- Use "Merge" mode if unsure about conflicts
+- Export current data before importing as backup
 
----
-
-## Styling & UX
-
-- Dark‑theme variables and cards, with responsive grid layout. fileciteturn1file3L8-L15 fileciteturn1file3L27-L43
-- Calendar cell states: `muted`, `today`, `has-events`, `danger` (no school). fileciteturn1file4L6-L12
-- Resizable split‑pane with mouse, touch, and keyboard; width is persisted. fileciteturn1file16L1-L9
-
----
-
-## Possible Enhancements
-
-- Optional ICS import for external calendars.
-- Search across tasks and notes.
-- Per‑tag color coding and sorting options.
-- Undo/redo stack for edits.
-- Accessibility polishing (ARIA on buttons, focus states already present). fileciteturn1file15L27-L30
-
----
-
-## File Map
-
-- `ToDoCalendar_v1.html` — the entire app (HTML+CSS+JS).
-- `README.md` — this document with diagrams and architecture notes.
-
+## License
+This is a standalone application. Modify and use as needed for personal or educational purposes.
