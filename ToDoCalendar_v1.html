@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>To‑Do + SUSD Calendar — No external deps</title>
+  <style>
+    /* ===== Dark theme tuned for readability ===== */
+    :root{
+      --bg:#0e1116;         /* slightly lighter than before */
+      --panel:#111724;      /* cards/left panel */
+      --text:#eaf0f8;       /* higher contrast body text */
+      --muted:#a6b0bf;      /* labels, secondary */
+      --accent:#8fb4ff;     /* focus/primary */
+      --accent-2:#47c6ff;   /* today outline */
+      --danger:#ef4444;     /* no school */
+      --ok:#22c55e;
+      --divider:#273044;    /* clearer separators */
+      --input-bg:#0f1522;   /* controls background */
+      --input-border:#2a3756; /* controls border */
+      --input-focus:#3d68b3;  /* focus border */
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background:var(--bg); color:var(--text); }
+
+    /* Layout */
+    .app{ display:grid; grid-template-columns: minmax(360px, 1fr) minmax(420px, 2fr); min-height:100vh; }
+    @media (max-width: 900px){ .app{ grid-template-columns: 1fr; } .right{ border-left:none; border-top:1px solid var(--divider); } }
+    .left{ padding:20px; border-right:1px solid var(--divider); background:var(--panel); }
+    .right{ padding:20px; background:#0b0f18; }
+
+    /* Splitter */
+    .splitter{ background: var(--divider); cursor: col-resize; width: 8px; height: 100%; }
+    .splitter:hover{ background:#354264; }
+    .splitter:focus{ outline:2px solid var(--accent); outline-offset:-2px; }
+    .app.dragging .splitter{ background: var(--accent); }
+
+    /* UI bits */
+    .row{ display:flex; gap:12px; align-items:center; }
+    .stack{ display:grid; gap:12px; }
+    .card{ background:#131a2a; border:1px solid #223150; border-radius:16px; padding:16px; box-shadow:var(--shadow); }
+    label{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+
+    input[type="text"], textarea, select{
+      width:100%; background:var(--input-bg); border:1px solid var(--input-border); color:var(--text);
+      padding:10px 12px; border-radius:12px; outline:none;
+    }
+    select option{ color:var(--text); background:var(--input-bg); }
+    input[type="text"]:focus, textarea:focus, select:focus{ border-color:var(--input-focus); box-shadow:0 0 0 2px rgba(143,180,255,.25); }
+    input[type="text"]:focus-visible, textarea:focus-visible, select:focus-visible, .splitter:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; }
+
+    textarea{ min-height:90px; resize:vertical; }
+    button{ background:#15213a; color:var(--text); border:1px solid #26365a; padding:10px 14px; border-radius:12px; cursor:pointer; }
+    button.primary{ background:linear-gradient(180deg,#1a2e59,#142543); border-color:#244072; }
+    button.danger{ background:linear-gradient(180deg,#451319,#2f0d12); border-color:#5c1e25; color:#f8b4b8; }
+    button.ghost{ background:transparent; border-color:#2b3c63; }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .pill{ padding:4px 10px; border-radius:999px; background:#0f172a; border:1px solid #2a3a60; font-size:12px; color:var(--muted); }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:8px; }
+    .spacer{ flex:1; }
+    .divider{ height:1px; background:var(--divider); margin:10px 0; }
+
+    /* Calendar */
+    .calendar{ width:100%; max-width:none; margin:0; }
+    .cal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; }
+    .cal-nav{ display:flex; gap:6px; align-items:center; }
+    .cal-grid{ display:grid; grid-template-columns:repeat(7, 1fr); gap: clamp(4px, 0.8vw, 12px); }
+    .cal-cell{ position:relative; aspect-ratio:1/1; border-radius:10px; display:flex; align-items:flex-start; justify-content:flex-end; padding:clamp(4px, 0.8vw, 10px); border:1px solid #203052; background:#0e1730; color:#d7deea; transition:border-color .15s, box-shadow .15s, background .15s; font-size: clamp(11px, 1.1vw, 14px); }
+    .cal-cell.muted{ opacity:.55; }
+    .cal-cell.today{ outline:2px solid var(--accent-2); }
+    .cal-cell.has-events{ border-color: var(--accent); box-shadow: 0 0 0 2px rgba(143,180,255,.23) inset, 0 6px 24px rgba(143,180,255,.12); }
+    .cal-cell.has-events.danger{ border-color: var(--danger); box-shadow: 0 0 0 2px rgba(239,68,68,.25) inset, 0 6px 24px rgba(239,68,68,.12); background: linear-gradient(180deg, rgba(239,68,68,.06), transparent); }
+    .day-badge{ position:absolute; top:6px; left:6px; font-size:clamp(10px, 1vw, 12px); padding:2px 6px; border-radius:8px; background:#0d152c; border:1px solid #2a3a60; color:#b7c2d6; }
+    .event-count{ position:absolute; top:6px; right:6px; font-size:clamp(10px, 1vw, 12px); padding:2px 6px; border-radius:999px; background:#0d152c; border:1px solid #2a3a60; color:#b7c2d6; }
+
+    .ev{ display:inline-block; width:10px; height:10px; border-radius:999px; border:1px solid rgba(255,255,255,.2); }
+    .ev.early_release{ background:#b59cff; border-color:#4c1d95; }
+    .ev.early_release_partial{ background:#f497c2; border-color:#831843; }
+    .ev.no_school{ background:#ef4444; border-color:#7f1d1d; }
+    .ev.first_day, .ev.last_day{ background:#22c55e; border-color:#14532d; }
+
+    .legend{ display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); }
+    .legend .item{ display:flex; align-items:center; gap:6px; }
+
+    /* Collapsible Advanced styles (kept minimal) */
+    details.advanced{ margin-top:12px; }
+    details.advanced > summary{ cursor:pointer; padding:10px 12px; border:1px solid #223150; border-radius:12px; background:#131a2a; user-select:none; }
+    details.advanced[open] > summary{ border-bottom-left-radius:0; border-bottom-right-radius:0; }
+    .advanced-inner{ border:1px solid #223150; border-top:none; border-bottom-left-radius:12px; border-bottom-right-radius:12px; padding:12px; background:#131a2a; }
+  </style>
+</head>
+<body>
+  <div id="root"><noscript>This page needs JavaScript enabled.</noscript></div>
+  <script>
+  // ========= Tiny helper =========
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const BOOLEAN_ATTRS = new Set(['disabled','checked','selected','multiple','readonly','required','open']);
+  const h = (tag, attrs={}, children=[]) => {
+    const el = document.createElement(tag);
+    for (const k in attrs){
+      const v = attrs[k];
+      if (k==='class') el.className = v;
+      else if (k==='style' && typeof v==='object'){ Object.assign(el.style, v); }
+      else if (k.startsWith('on') && typeof v==='function'){ el.addEventListener(k.slice(2).toLowerCase(), v); }
+      else if (BOOLEAN_ATTRS.has(k)) { if (v) el.setAttribute(k, ''); else el.removeAttribute(k); el[k] = !!v; }
+      else if (v!==null && v!==undefined) { el.setAttribute(k, String(v)); }
+    }
+    const append = (ch) => {
+      if (ch===null || ch===undefined || ch===false) return;
+      if (Array.isArray(ch)) { ch.forEach(append); return; }
+      if (typeof ch === 'string' || typeof ch === 'number' || typeof ch === 'boolean') { el.appendChild(document.createTextNode(String(ch))); return; }
+      try { el.appendChild(ch); } catch { el.appendChild(document.createTextNode(String(ch))); }
+    };
+    append(children);
+    return el;
+  };
+
+  // ========= Safe storage =========
+  const LS_KEY = 'todo_local_state_v1';
+  const LS_UI_DARK = 'ui_darkmode';
+  const LS_COL_W_KEY = 'ui_left_px';
+  const UI_LAYOUT = { gutter: 8, minLeft: 360, minRight: 420 };
+  const storage = {
+    get(k, def=null){ try{ const v = localStorage.getItem(k); return v===null? def : v; }catch{ return def; } },
+    set(k, v){ try{ localStorage.setItem(k, v); }catch{} },
+    remove(k){ try{ localStorage.removeItem(k); }catch{} }
+  };
+  const uid = () => Math.floor(Math.random()*1e9) + '-' + Date.now();
+
+  // ========= App state =========
+  function validateState(obj){
+    if (!obj || typeof obj !== 'object') return false;
+    if (!Array.isArray(obj.tasks) || !Array.isArray(obj.tags)) return false;
+    return obj.tasks.every(t => t && typeof t==='object' && 'id' in t && 'name' in t && 'created_at' in t && 'is_completed' in t);
+  }
+  function loadState(){
+    try{ const raw = storage.get(LS_KEY, null); if (!raw) return { tasks:[], tags:[] }; const parsed = JSON.parse(raw); return validateState(parsed)? parsed : { tasks:[], tags:[] }; }catch{ return { tasks:[], tags:[] }; }
+  }
+  function saveState(st){ try{ storage.set(LS_KEY, JSON.stringify(st)); }catch{} }
+
+  function mergeStates(existing, incoming, mode='merge', conflictPolicy='keep'){
+    if (!validateState(incoming)) throw new Error('Invalid file structure');
+    if (mode==='replace') return { tasks:[...incoming.tasks], tags:[...incoming.tags] };
+    const out = { tasks:[], tags:[] };
+    const tagSet = new Set([...(existing.tags||[]), ...(incoming.tags||[])]);
+    out.tags = Array.from(tagSet).sort();
+    const byId = new Map();
+    for (const t of existing.tasks||[]) byId.set(t.id, t);
+    for (const inc of incoming.tasks||[]){ let t = inc; if (!t.id) t = { ...inc, id: uid() }; if (!byId.has(t.id)) byId.set(t.id, t); else if (conflictPolicy==='overwrite') byId.set(t.id, t); }
+    out.tasks = Array.from(byId.values()).sort((a,b)=> (b.created_at||0) - (a.created_at||0));
+    return out;
+  }
+
+  let state = loadState();
+  const today = new Date();
+  let ui = {
+    dark: true,
+    filter:'all', range:[null,null],
+    calYear: today.getFullYear(), calMonth: today.getMonth(),
+    activeTagFilter: '__all__',
+    completedTagFilter: '__all__',
+    groupActive:false,
+    groupCompleted:false,
+    leftPx: null,
+  };
+
+  function setState(mut){ state = mut(state); saveState(state); render(); }
+
+  // ========= Actions =========
+  const actions = {
+    addTask(name, tag, notes){ if(!name || !name.trim()) return; setState(s=>{ const t={ id:uid(), name:name.trim(), tag:(tag||null), notes:(notes||'').trim(), created_at:Date.now(), completed_at:null, is_completed:0 }; const tags=(t.tag && !s.tags.includes(t.tag))? [...s.tags, t.tag].sort(): s.tags; return { tasks:[t, ...s.tasks], tags }; }); },
+    toggleTask(id){ setState(s=> ({...s, tasks:s.tasks.map(t=> t.id===id? { ...t, is_completed: t.is_completed? 0:1, completed_at: t.is_completed? null : Date.now() } : t) })); },
+    deleteTask(id){ setState(s=> ({...s, tasks:s.tasks.filter(t=> t.id!==id)})); },
+    updateNotes(id, notes){ setState(s=> ({...s, tasks:s.tasks.map(t=> t.id===id? { ...t, notes } : t)})); },
+    clearCompleted(){ setState(s=> ({...s, tasks:s.tasks.filter(t=> !t.is_completed)})); },
+    resetAll(){ if (confirm('Reset will permanently delete all tasks and tags. Continue?')){ storage.remove(LS_KEY); state={tasks:[], tags:[]}; saveState(state); render(); } },
+    exportJSON(){ try{ const dataStr = JSON.stringify(state, null, 2); const blob = new Blob([dataStr], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); const ts=new Date().toISOString().replace(/[:.]/g,'-'); a.href=url; a.download=`todo-export-${ts}.json`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),3000);}catch(e){ alert('Export failed: '+(e&&e.message||e)); } },
+    importFromObject(obj, mode='merge', conflictPolicy='keep'){ const merged = mergeStates(state, obj, mode, conflictPolicy); saveState(merged); state=merged; render(); },
+    calPrev(){ if(--ui.calMonth<0){ ui.calMonth=11; ui.calYear--; } render(); },
+    calNext(){ if(++ui.calMonth>11){ ui.calMonth=0; ui.calYear++; } render(); },
+    calToday(){ const d=new Date(); ui.calYear=d.getFullYear(); ui.calMonth=d.getMonth(); render(); },
+    toggleDark(){ ui.dark=!ui.dark; document.body.classList.toggle('light', !ui.dark); storage.set(LS_UI_DARK, ui.dark? 'true':'false'); },
+  };
+
+  // ========= UI parts =========
+  function TagSelect(options, value, onChange){
+    const sel = h('select', {}, [ h('option', { value:'' }, 'No tag'), ...options.map(t=> h('option', { value:t }, t)) ]);
+    sel.value = value || '';
+    const input = h('input', { type:'text', placeholder:'or new tag…' });
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter' && input.value.trim()){ e.stopPropagation(); e.preventDefault(); onChange(input.value.trim()); input.value=''; sel.value=''; } });
+    sel.addEventListener('change', ()=> onChange(sel.value || null));
+    return h('div', { class:'row' }, [sel, input]);
+  }
+
+  function NotesInline(t){ const ta=h('textarea', { placeholder:'Notes…' }, t.notes||''); ta.addEventListener('blur', ()=>{ if((t.notes||'')!==ta.value) actions.updateNotes(t.id, ta.value); }); return ta; }
+
+  function TaskItem(t){
+    const checkbox = h('input', { type:'checkbox', checked: !!t.is_completed });
+    checkbox.addEventListener('change', ()=> actions.toggleTask(t.id));
+
+    const name = h('div', { class:'name' }, t.name);
+    const tag = t.tag ? h('span', { class:'pill' }, '# '+t.tag) : null;
+    const timestamp = h('span', { class:'pill' },
+      (t.is_completed? 'Completed ' : 'Added ') +
+      new Date(t.is_completed? t.completed_at : t.created_at).toLocaleString()
+    );
+
+    const notes = NotesInline(t);
+    const del = h('button', { class:'ghost', onclick: ()=> actions.deleteTask(t.id) }, '✕');
+
+    // Top row: checkbox, name, tag, timestamp, and the close x aligned right
+    const headerRow = h('div', { class:'row', style:{justifyContent:'space-between'} }, [
+      h('div', { class:'row', style:{gap:'8px', flex:1, minWidth:0} }, [
+        checkbox,
+        name,
+        tag,
+        timestamp
+      ].filter(Boolean)),
+      del
+    ]);
+
+    // Notes sit below as a full-width block
+    return h('div', { class:'todo '+(t.is_completed?'completed':'') }, [
+      headerRow,
+      notes
+    ]);
+  }
+
+  function CompletedFilter(){
+    const sel = h('select', {}, [
+      h('option', { value:'all' }, 'All completed'),
+      h('option', { value:'week' }, 'This week'),
+      h('option', { value:'month' }, 'This month'),
+      h('option', { value:'year' }, 'This year'),
+      h('option', { value:'custom' }, 'Custom…')
+    ]); sel.value = ui.filter; sel.addEventListener('change', ()=>{ ui.filter = sel.value; render(); });
+    const from = h('input', { type:'date' }); const to = h('input', { type:'date' });
+    const apply = h('button', { class:'primary', onclick: ()=>{ ui.range=[from.value, to.value]; render(); } }, 'Apply');
+    return h('div', { class:'row', style:{gap:'8px'} }, [ sel, (ui.filter==='custom')? h('span', {}, [from, to, apply]) : null ].filter(Boolean));
+  }
+
+  function TagFilterSelect(selected, onChange){
+    const opts = [['__all__','All tags'], ['__none__','No tag'], ...state.tags.map(t=>[t,t])];
+    const sel = h('select', {}, opts.map(([v,l])=> h('option', { value:v, selected: selected===v }, l)));
+    sel.addEventListener('change', e=> onChange(e.target.value));
+    return sel;
+  }
+  function filterByTag(list, key){ if(key==='__all__') return list; if(key==='__none__') return list.filter(t=> !t.tag); return list.filter(t=> t.tag===key); }
+  function GroupedTasks(list){ const groups=new Map(); for(const t of list){ const k=t.tag||'__none__'; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(t);} const keys=[...groups.keys()].filter(k=>k!=='__none__').sort((a,b)=> String(a).localeCompare(String(b),'en',{sensitivity:'base'})); if(groups.has('__none__')) keys.push('__none__'); const labelFor=k=> k==='__none__'? 'No tag':k; return h('div', { class:'stack' }, keys.map(k=> h('div', { class:'stack' }, [ h('div', { class:'row' }, [ h('span', { class:'pill' }, `${labelFor(k)} • ${groups.get(k).length}`) ]), ...groups.get(k).map(TaskItem) ]))); }
+
+  // ========= Calendar =========
+  const SUSD_EVENTS = {
+    '2025-08':[ {type:'first_day',days:[4]}, {type:'early_release',days:[27]} ],
+    '2025-09':[ {type:'no_school',days:[1]}, {type:'early_release',days:[10]}, {type:'no_school',days:[23]} ],
+    '2025-10':[ {type:'no_school',days:[2]}, {type:'early_release',days:[8]}, {type:'no_school',days:[13,14,15,16,17]}, {type:'early_release_partial',days:[29,30,31]} ],
+    '2025-11':[ {type:'early_release',days:[5]}, {type:'no_school',days:[11]}, {type:'no_school',days:[26,27,28]} ],
+    '2025-12':[ {type:'early_release',days:[10]}, {type:'no_school',days:[19]}, {type:'no_school',days:[22,23,24,25,26,29,30,31]} ],
+    '2026-01':[ {type:'no_school',days:[1,2,19]}, {type:'early_release',days:[28]} ],
+    '2026-02':[ {type:'no_school',days:[16]}, {type:'early_release',days:[25]} ],
+    '2026-03':[ {type:'early_release',days:[4]}, {type:'no_school',days:[13]}, {type:'no_school',days:[16,17,18,19,20]}, {type:'early_release_partial',days:[31]} ],
+    '2026-04':[ {type:'early_release_partial',days:[1,2]}, {type:'no_school',days:[3]}, {type:'early_release',days:[29]} ],
+    '2026-05':[ {type:'early_release',days:[6]}, {type:'last_day',days:[22]}, {type:'no_school',days:[25]} ],
+  };
+  const LABELS = {
+    early_release:'Early Release: All Grades, incl. Pre-K',
+    early_release_partial:'Conf. Early Release',
+    no_school:'No School',
+    first_day:'First Day For Students',
+    last_day:'Last Day of School – Early Release (All Grades, incl. Pre-K)'
+  };
+  const ALLOWED_TYPES = new Set(['early_release','early_release_partial','no_school','first_day','last_day']);
+
+  // Tooltip
+  let tooltipEl = null; function ensureTooltip(){ if(!tooltipEl){ tooltipEl=document.createElement('div'); tooltipEl.className='tooltip'; document.body.appendChild(tooltipEl);} }
+  function showTooltip(content,x,y){ ensureTooltip(); tooltipEl.innerHTML=content; tooltipEl.style.position='fixed'; tooltipEl.style.zIndex='9999'; tooltipEl.style.display='block'; moveTooltip(x,y); tooltipEl.style.maxWidth='320px'; tooltipEl.style.padding='10px 12px'; tooltipEl.style.borderRadius='12px'; tooltipEl.style.background='#131a2a'; tooltipEl.style.border='1px solid #223150'; tooltipEl.style.boxShadow='0 10px 30px rgba(0,0,0,.45)'; tooltipEl.style.color='var(--text)'; }
+  function moveTooltip(x,y){ if(!tooltipEl) return; const pad=12; const rect=tooltipEl.getBoundingClientRect(); let left=x+pad, top=y+pad; const vw=window.innerWidth, vh=window.innerHeight; if(left+rect.width+pad>vw) left=vw-rect.width-pad; if(top+rect.height+pad>vh) top=vh-rect.height-pad; tooltipEl.style.left=left+'px'; tooltipEl.style.top=top+'px'; }
+  function hideTooltip(){ if(tooltipEl){ tooltipEl.style.display='none'; } }
+
+  function SUSDCalendarPanel(){
+    const year = ui.calYear, month = ui.calMonth; // 0-indexed
+    const key = year + '-' + String(month+1).padStart(2,'0');
+    const inRange = !!SUSD_EVENTS[key];
+    const monthName = new Date(year, month, 1).toLocaleString(undefined, { month:'long' });
+
+    const start = new Date(year, month, 1);
+    const startDay = start.getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const prevDays = new Date(year, month, 0).getDate();
+    const cells = [];
+    for (let i=startDay-1; i>=0; i--) cells.push({ day: prevDays-i, muted: true });
+    for (let d=1; d<=daysInMonth; d++) cells.push({ day:d, muted:false });
+    let tail = 1; while (cells.length % 7 !== 0 || cells.length < 42) cells.push({ day: tail++, muted: true });
+
+    function eventsFor(day){ if(!inRange) return []; const m=SUSD_EVENTS[key]||[]; const out=[]; for(const ev of m){ if(!ALLOWED_TYPES.has(ev.type)) continue; if (ev.days && ev.days.includes(day)) out.push(ev); if (ev.range){ const [a,b]=ev.range; if(day>=a && day<=b) out.push(ev); } } return out; }
+
+    const weekdays = Array.from({length:7}, (_,i)=> new Date(2023,0,i+1).toLocaleString(undefined,{weekday:'short'}));
+
+    const nav = h('div', { class:'cal-nav' }, [ h('button', { onclick: actions.calPrev }, '‹'), h('button', { onclick: actions.calToday }, 'Today'), h('button', { onclick: actions.calNext }, '›') ]);
+
+    const gridHeader = h('div', { class:'cal-grid', style:{marginBottom:'6px'} }, weekdays.map(w=> h('div', { class:'cal-cell muted', style:{aspectRatio:'unset', justifyContent:'center', display:'flex', alignItems:'center'} }, w)));
+    const grid = h('div', { class:'cal-grid' }, cells.map(c=>{
+      const day = c.muted ? null : c.day;
+      const evs = day? eventsFor(day) : [];
+      const classes = ['cal-cell'];
+      if (c.muted) classes.push('muted');
+      if (day && evs.length>0) classes.push('has-events');
+      if (day && evs.some(ev=> ev.type==='no_school')) classes.push('danger');
+      const isToday = (year===today.getFullYear() && month===today.getMonth() && day===today.getDate());
+      if (isToday) classes.push('today');
+
+      const badgeText = (typeof c.day === 'number') ? String(c.day) : '';
+      const cell = h('div', { class: classes.join(' ') }, [
+        h('span', { class:'day-badge' }, badgeText),
+        day && evs.length>0 ? h('span', { class:'event-count' }, evs.length+'•') : null,
+        h('div', { style:{marginTop:'auto'} }, day && evs.length>0 ? h('div', { class:'row', style:{flexWrap:'wrap', gap:'6px'} }, evs.slice(0,5).map(ev=> h('span', { class:'ev '+ev.type }))) : null)
+      ]);
+
+      if (day && evs.length>0){
+        const dateStr = new Date(year, month, day).toLocaleDateString(undefined, { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+        const html = [ `<div class=\"tt-title\">${dateStr}</div>` ]
+          .concat(evs.map(ev => `<div class=\"tt-item\"><span class=\"ev ${ev.type}\"></span><span>${(LABELS[ev.type]||ev.type)}</span></div>`))
+          .join('');
+        cell.addEventListener('mouseenter', (e)=>{ showTooltip(html, e.clientX, e.clientY); });
+        cell.addEventListener('mousemove', (e)=>{ moveTooltip(e.clientX, e.clientY); });
+        cell.addEventListener('mouseleave', hideTooltip);
+      }
+
+      return cell;
+    }));
+
+    const legendItems = [ ['first_day','First Day'], ['last_day','Last Day'], ['no_school','No School'], ['early_release','Early Release'], ['early_release_partial','Conf. Early Release'] ].map(([t,label])=> h('div', { class:'item' }, [ h('span', { class:'ev '+t }), h('span', {}, label) ]));
+
+    return h('div', { class:'calendar card' }, [ h('div', { class:'cal-header' }, [ h('h2', {}, monthName + ' ' + year + (inRange? '':' (no district events)')), nav ]), gridHeader, grid, h('div', { class:'divider' }), h('div', { class:'legend' }, legendItems) ]);
+  }
+
+  // ========= Import (kept) =========
+  function ImportCard(){
+    const file = h('input', { type:'file', accept:'application/json,.json', style:{ display:'none' } });
+    const modeSel = h('select', {}, [ h('option', { value:'merge' }, 'Merge (recommended)'), h('option', { value:'replace' }, 'Replace') ]);
+    let mode = 'merge'; modeSel.value = mode; modeSel.addEventListener('change', ()=> mode=modeSel.value);
+    const pick = h('button', { onclick: ()=> file.click() }, 'Choose File…');
+    const status = h('div', { class:'pill' }, 'Ready');
+
+    function summarizeMerge(incoming){ const existingIds = new Set(state.tasks.map(t=>t.id)); let newTasks = 0, dups = 0; (incoming.tasks||[]).forEach(t=> existingIds.has(t.id) ? dups++ : newTasks++); const tagUnion = new Set([...(state.tags||[]), ...((incoming.tags)||[])]); return { newTasks, dups, newTags: tagUnion.size - state.tags.length }; }
+
+    file.addEventListener('change', (e)=>{
+      const f = e.target.files && e.target.files[0]; if (!f) return; const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const obj = JSON.parse(String(reader.result||''));
+          if (!validateState(obj)) throw new Error('File does not match expected format.');
+          let conflictPolicy='keep';
+          if (mode==='merge'){
+            const s = summarizeMerge(obj);
+            const proceed = confirm(`Merge will add ~${s.newTasks} new task(s), resolve ~${s.dups} duplicate id(s), and add ~${s.newTags} new tag(s). Continue?`);
+            if (!proceed) { file.value=''; return; }
+            if (s.dups>0){ const choice = prompt(`Found ${s.dups} duplicate id(s). Type "o" to Overwrite duplicates, "k" to Keep existing. Cancel/blank to abort.`); if (choice===null || choice.trim()===''){ file.value=''; return; } conflictPolicy = choice.trim().toLowerCase().startsWith('o')? 'overwrite':'keep'; }
+          } else {
+            const ok = confirm(`Replace will overwrite your current data with ${obj.tasks.length} task(s) and ${obj.tags.length} tag(s). Continue?`);
+            if (!ok) { file.value=''; return; }
+          }
+          actions.importFromObject(obj, mode, conflictPolicy);
+          status.textContent = 'Imported';
+        } catch(err){ status.textContent = String((err&&err.message)||err); }
+        finally { file.value=''; }
+      };
+      reader.onerror = ()=>{ status.textContent='Failed to read file'; };
+      reader.readAsText(f);
+    });
+
+    return h('div', { class:'card stack' }, [ h('h3', {}, 'Import from JSON'), status, h('div', { class:'row' }, [ h('label', {}, 'Mode'), modeSel ]), h('div', { class:'toolbar' }, [ pick, file ]) ]);
+  }
+
+  // ========= Advanced (Diagnostics removed, Import kept) =========
+  function AdvancedPanel(){
+    return h('details', { class:'advanced' }, [
+      h('summary', {}, 'Advanced (Import/Export & Reset)'),
+      h('div', { class:'advanced-inner stack' }, [
+        h('div', { class:'toolbar' }, [ h('button', { class:'danger', onclick: actions.resetAll }, 'Reset App'), h('button', { onclick: actions.exportJSON }, 'Export JSON') ]),
+        ImportCard()
+      ])
+    ]);
+  }
+
+  // ========= Main render =========
+  function render(){
+    const root = $('#root');
+    root.innerHTML='';
+
+    document.body.classList.toggle('light', !ui.dark);
+
+    const tasksSorted = Array.isArray(state.tasks)? [...state.tasks].sort((a,b)=> (b.created_at||0) - (a.created_at||0)) : [];
+    const active = tasksSorted.filter(t=> !t.is_completed);
+
+    const activeFiltered = filterByTag(active, ui.activeTagFilter);
+    const activeControls = h('div', { class:'toolbar' }, [ h('label', {}, 'Tag'), TagFilterSelect(ui.activeTagFilter, v=>{ ui.activeTagFilter=v; render(); }), h('span', { class:'spacer' }), h('label', {}, 'Group by tag'), h('input', { type:'checkbox', checked: ui.groupActive, onchange:(e)=>{ ui.groupActive=e.target.checked; render(); }}) ]);
+
+    const activeCard = h('div', { class:'card stack' }, [ h('div', { class:'row', style:{justifyContent:'space-between'} }, [ h('h3', {}, `Active Tasks (${activeFiltered.length})`) ]), activeControls, activeFiltered.length===0? h('div', { class:'muted' }, 'No tasks') : (ui.groupActive ? GroupedTasks(activeFiltered) : activeFiltered.map(TaskItem)) ]);
+
+    let completed = tasksSorted.filter(t=> t.is_completed);
+    const now = new Date();
+    if (ui.filter==='week'){ const day=now.getDay(); const start=new Date(now); start.setDate(now.getDate()-day); start.setHours(0,0,0,0); const end=new Date(start); end.setDate(start.getDate()+7); completed = completed.filter(t=> t.completed_at>=+start && t.completed_at<+end); }
+    else if (ui.filter==='month'){ const start=new Date(now.getFullYear(), now.getMonth(), 1); const end=new Date(now.getFullYear(), now.getMonth()+1, 1); completed = completed.filter(t=> t.completed_at>=+start && t.completed_at<+end); }
+    else if (ui.filter==='year'){ const start=new Date(now.getFullYear(), 0, 1); const end=new Date(now.getFullYear()+1, 0, 1); completed = completed.filter(t=> t.completed_at>=+start && t.completed_at<+end); }
+    else if (ui.filter==='custom' && ui.range[0] && ui.range[1]){ const [from,to]=ui.range; const end=new Date(to); end.setDate(end.getDate()+1); completed = completed.filter(t=> t.completed_at>=+new Date(from) && t.completed_at<+end); }
+
+    const completedFiltered = filterByTag(completed, ui.completedTagFilter);
+    const completedControls = h('div', { class:'toolbar' }, [ h('label', {}, 'Tag'), TagFilterSelect(ui.completedTagFilter, v=>{ ui.completedTagFilter=v; render(); }), h('span', { class:'spacer' }), h('label', {}, 'Group by tag'), h('input', { type:'checkbox', checked: ui.groupCompleted, onchange:(e)=>{ ui.groupCompleted=e.target.checked; render(); }}) ]);
+
+    const completedCard = h('div', { class:'card stack' }, [ h('div', { class:'row', style:{justifyContent:'space-between'} }, [ h('h3', {}, `Completed (${tasksSorted.filter(x=>x.is_completed).length})`), h('div', { class:'toolbar' }, [ CompletedFilter(), h('button', { onclick: actions.clearCompleted }, 'Clear Completed') ]) ]), completedControls, completedFiltered.length===0 ? h('div', { class:'muted' }, 'No tasks in range') : (ui.groupCompleted ? GroupedTasks(completedFiltered) : completedFiltered.map(TaskItem)) ]);
+
+    const left = h('div', { class:'left stack' }, [
+      (function(){
+        const name = h('input', { id:'new-task-input', type:'text', placeholder:'Add a task…' });
+        const notes = h('textarea', { placeholder:'Optional notes…' });
+        let tagValue = null; const tagSel = TagSelect(state.tags, null, v=>{ tagValue=v; });
+        const add = ()=>{ const taskName=(name.value||'').trim(); if(!taskName) return; const taskNotes=notes.value||''; let tval=tagValue; const selEl=tagSel.querySelector('select'); const inputEl=tagSel.querySelector('input'); const typed=inputEl&&inputEl.value? inputEl.value.trim():''; const selected=selEl&&selEl.value? selEl.value:''; if(!tval) tval=typed||selected||null; actions.addTask(taskName, tval, taskNotes); requestAnimationFrame(()=>{ const fresh=document.getElementById('new-task-input'); if(fresh) fresh.focus(); }); };
+        const container = h('div', { class:'card stack' }, [ h('div', { class:'stack' }, [ h('div', { class:'stack' }, [ h('label', {}, 'Task name'), name ]), h('div', { class:'stack' }, [ h('label', {}, 'Tag'), tagSel ]), h('div', { class:'stack' }, [ h('label', {}, 'Notes (optional)'), notes ]) ]), h('div', { class:'toolbar' }, [ h('button', { class:'primary', onclick: add }, 'Add Task'), h('span', { class:'spacer' }) ]) ]);
+        container.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); add(); }});
+        return container;
+      })(),
+      activeCard,
+      completedCard,
+      AdvancedPanel()
+    ]);
+
+    const right = h('div', { class:'right' }, SUSDCalendarPanel());
+
+    const stacked = window.innerWidth <= 900;
+    if (stacked){
+      root.appendChild(h('div', { class:'app' }, [ left, right ]));
+    } else {
+      const { gutter, minLeft, minRight } = UI_LAYOUT; const total = Math.max(0, window.innerWidth);
+      const maxLeft = Math.max(minLeft, total - minRight - gutter);
+      let leftPx = parseInt(storage.get(LS_COL_W_KEY, ''), 10);
+      if (!Number.isFinite(leftPx)) leftPx = Math.round(Math.min(maxLeft, Math.max(minLeft, total * 0.38)));
+
+      const splitter = h('div', { class:'splitter', tabindex:0, role:'separator', 'aria-orientation':'vertical', 'aria-label':'Resize panels' });
+      const appEl = h('div', { class:'app', style:{ gridTemplateColumns: `${leftPx}px ${gutter}px 1fr` } }, [ left, splitter, right ]);
+      root.appendChild(appEl);
+
+      (function bindSplitter(split, app){
+        let dragging = false;
+        function applyAt(x){ const rect = app.getBoundingClientRect(); let left = x - rect.left; const max = Math.max(minLeft, rect.width - minRight - gutter); left = Math.max(minLeft, Math.min(left, max)); app.style.gridTemplateColumns = `${left}px ${gutter}px 1fr`; ui.leftPx = left; }
+        function onMouseMove(e){ if(!dragging) return; applyAt(e.clientX); }
+        function onMouseUp(){ if(!dragging) return; dragging=false; app.classList.remove('dragging'); document.body.style.userSelect=''; window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); if (ui.leftPx) storage.set(LS_COL_W_KEY, String(ui.leftPx)); }
+        split.addEventListener('mousedown', (e)=>{ dragging=true; app.classList.add('dragging'); document.body.style.userSelect='none'; applyAt(e.clientX); window.addEventListener('mousemove', onMouseMove); window.addEventListener('mouseup', onMouseUp); });
+        function onTouchMove(e){ if(!dragging) return; const t=e.touches[0]; applyAt(t.clientX); e.preventDefault(); }
+        function onTouchEnd(){ if(!dragging) return; dragging=false; app.classList.remove('dragging'); document.body.style.userSelect=''; window.removeEventListener('touchmove', onTouchMove); window.removeEventListener('touchend', onTouchEnd); if (ui.leftPx) storage.set(LS_COL_W_KEY, String(ui.leftPx)); }
+        split.addEventListener('touchstart', (e)=>{ const t=e.touches[0]; dragging=true; app.classList.add('dragging'); document.body.style.userSelect='none'; applyAt(t.clientX); window.addEventListener('touchmove', onTouchMove, {passive:false}); window.addEventListener('touchend', onTouchEnd); });
+        split.addEventListener('keydown', (e)=>{ const step = e.shiftKey? 40 : 10; const rect = app.getBoundingClientRect(); const current = ui.leftPx || leftPx; if (e.key==='ArrowLeft'){ applyAt(rect.left + current - step); storage.set(LS_COL_W_KEY, String(ui.leftPx)); e.preventDefault(); } else if (e.key==='ArrowRight'){ applyAt(rect.left + current + step); storage.set(LS_COL_W_KEY, String(ui.leftPx)); e.preventDefault(); } });
+      })(splitter, appEl);
+
+      // Double-click to reset proportional split
+      splitter.addEventListener('dblclick', ()=>{
+        const totalW = appEl.getBoundingClientRect().width;
+        const max = Math.max(minLeft, totalW - minRight - gutter);
+        const left = Math.round(Math.min(Math.max(minLeft, totalW * 0.38), max));
+        appEl.style.gridTemplateColumns = `${left}px ${gutter}px 1fr`;
+        ui.leftPx = left; storage.set(LS_COL_W_KEY, String(left));
+      });
+    }
+  }
+
+  // Start + handle window resize reflow
+  let _resizeRaf = null;
+  window.addEventListener('resize', ()=>{ if(_resizeRaf) return; _resizeRaf = requestAnimationFrame(()=>{ _resizeRaf=null; render(); }); });
+  document.addEventListener('DOMContentLoaded', render);
+  </script>
+</body>
+</html>
