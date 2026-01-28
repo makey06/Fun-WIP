@@ -410,12 +410,12 @@
             <p><em>Required format: Activity | Start Time | End Time | Notes (optional)</em></p>
             <p><em>Times in 12-hour format (e.g., 9:00 AM, 2:30 PM). Leave times blank for flexible activities.</em></p>
             
-            <button class="btn" onclick="loadFromGitHub()">🔗 Load from GitHub Repository</button>
+            <button class="btn" onclick="loadFromGitHub()">🔗 Load Live Schedule</button>
             
             <div style="text-align: center; margin: 16px 0; color: #8b98a5; font-size: 14px;">or</div>
             
             <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="loadFromFile()">
-            <button class="btn secondary" onclick="document.getElementById('csvFile').click()">📂 Upload Local CSV File</button>
+            <button class="btn secondary" onclick="document.getElementById('csvFile').click()">📂 Upload CSV File</button>
             
             <div id="errorMsg"></div>
         </div>
