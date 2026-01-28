@@ -406,12 +406,16 @@
     <div id="setupScreen" class="setup-screen">
         <div class="setup-card">
             <h2>📅 Schedule App</h2>
-            <p><strong>Upload your schedule CSV file</strong></p>
+            <p><strong>Choose your schedule source</strong></p>
             <p><em>Required format: Activity | Start Time | End Time | Notes (optional)</em></p>
             <p><em>Times in 12-hour format (e.g., 9:00 AM, 2:30 PM). Leave times blank for flexible activities.</em></p>
             
+            <button class="btn" onclick="loadFromGitHub()">🔗 Load from GitHub Repository</button>
+            
+            <div style="text-align: center; margin: 16px 0; color: #8b98a5; font-size: 14px;">or</div>
+            
             <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="loadFromFile()">
-            <button class="btn" onclick="document.getElementById('csvFile').click()">📂 Upload CSV File</button>
+            <button class="btn secondary" onclick="document.getElementById('csvFile').click()">📂 Upload Local CSV File</button>
             
             <div id="errorMsg"></div>
         </div>
@@ -453,6 +457,10 @@
         let timeUpdateInterval;
         let indicatorUpdateInterval;
         let lastLoadedFile = null;
+        let isGitHubSource = false;
+        
+        // GitHub raw file URL - this is the direct link to the raw CSV content
+        const GITHUB_CSV_URL = 'https://raw.githubusercontent.com/makey06/Fun-WIP/main/Babysitting/TyplicalSchedule%20-%20Sheet1.csv';
 
         function updateCurrentTime() {
             const now = new Date();
@@ -526,6 +534,60 @@
             }
         }
 
+        function loadFromGitHub() {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.innerHTML = '';
+            
+            isGitHubSource = true;
+            lastLoadedFile = null;
+
+            document.getElementById('scheduleList').innerHTML = '<div class="loading">Loading schedule from GitHub...</div>';
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('scheduleView').style.display = 'block';
+
+            // Add cache-busting parameter to get fresh data
+            const cacheBustUrl = GITHUB_CSV_URL + '?cachebust=' + new Date().getTime();
+
+            console.log('Loading from GitHub:', cacheBustUrl);
+
+            fetch(cacheBustUrl)
+                .then(response => {
+                    console.log('GitHub response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    console.log('CSV text received, length:', csvText.length);
+                    console.log('First 200 chars:', csvText.substring(0, 200));
+                    
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            console.log('Parse complete:', results);
+                            if (results.data && results.data.length > 0) {
+                                scheduleData = results.data;
+                                renderSchedule();
+                                startTimeUpdates();
+                                console.log('✅ Schedule loaded successfully from GitHub');
+                            } else {
+                                document.getElementById('scheduleList').innerHTML = '<div class="error">No schedule data found in GitHub file</div>';
+                            }
+                        },
+                        error: function(error) {
+                            console.error('Parse error:', error);
+                            document.getElementById('scheduleList').innerHTML = '<div class="error">Error parsing GitHub CSV file</div>';
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('GitHub fetch error:', error);
+                    document.getElementById('scheduleList').innerHTML = '<div class="error">Error loading from GitHub. Please check your internet connection or try uploading a local file instead.</div>';
+                });
+        }
+
         function loadFromFile() {
             const fileInput = document.getElementById('csvFile');
             const file = fileInput.files[0];
@@ -534,6 +596,7 @@
             
             if (!file) return;
 
+            isGitHubSource = false;
             lastLoadedFile = file;
 
             document.getElementById('scheduleList').innerHTML = '<div class="loading">Loading schedule...</div>';
@@ -559,13 +622,43 @@
         }
 
         function reloadSchedule() {
-            if (lastLoadedFile) {
-                const refreshBtn = document.getElementById('refreshBtn');
-                const refreshIcon = document.getElementById('refreshIcon');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
+            
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add('spinning');
+            
+            if (isGitHubSource) {
+                // Reload from GitHub
+                console.log('Reloading from GitHub...');
+                const cacheBustUrl = GITHUB_CSV_URL + '?cachebust=' + new Date().getTime();
                 
-                refreshBtn.disabled = true;
-                refreshIcon.classList.add('spinning');
-                
+                fetch(cacheBustUrl)
+                    .then(response => response.text())
+                    .then(csvText => {
+                        Papa.parse(csvText, {
+                            header: true,
+                            skipEmptyLines: true,
+                            complete: function(results) {
+                                if (results.data && results.data.length > 0) {
+                                    scheduleData = results.data;
+                                    renderSchedule();
+                                    console.log('✅ Schedule reloaded from GitHub');
+                                }
+                                refreshBtn.disabled = false;
+                                setTimeout(() => {
+                                    refreshIcon.classList.remove('spinning');
+                                }, 300);
+                            }
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Reload error:', error);
+                        refreshBtn.disabled = false;
+                        refreshIcon.classList.remove('spinning');
+                    });
+            } else if (lastLoadedFile) {
+                // Reload from local file
                 Papa.parse(lastLoadedFile, {
                     header: true,
                     skipEmptyLines: true,
@@ -580,6 +673,9 @@
                         }, 300);
                     }
                 });
+            } else {
+                refreshBtn.disabled = false;
+                refreshIcon.classList.remove('spinning');
             }
         }
 
