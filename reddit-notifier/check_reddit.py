@@ -1,32 +1,27 @@
 """
-Checks a subreddit for new posts matching keywords and sends an SMS via
-Gmail's SMTP server, using your carrier's email-to-SMS gateway.
+Checks a subreddit for new posts matching keywords and opens a GitHub Issue
+(assigned to the repo owner) for each match.
 
-Designed to be run on a schedule (e.g. via GitHub Actions). Tracks which
-posts have already triggered a notification in seen_posts.json so the same
-post never sends two texts.
+Designed to be run on a schedule via GitHub Actions. Tracks which posts have
+already been processed in seen_posts.json so the same post never triggers
+two issues. Uses the automatically-provided GITHUB_TOKEN and GITHUB_REPOSITORY
+env vars that every Actions run has access to -- no extra secrets needed.
 """
 
 import json
 import os
-import smtplib
 import sys
+import urllib.error
 import urllib.request
-from email.mime.text import MIMEText
 
 SUBREDDIT = "Redrising"
 KEYWORDS = ["red god", "release date"]
 SEEN_FILE = "seen_posts.json"
 MAX_SEEN_HISTORY = 300  # how many post IDs to remember, to keep the file small
 
-# Verizon's email-to-SMS gateway. The "TO_PHONE_NUMBER" secret should just be
-# the 10-digit number, e.g. 5551234567
-VERIZON_SMS_GATEWAY = "vtext.com"
-MAX_SMS_LENGTH = 150  # stay safely under the ~160 char SMS limit
-
 REDDIT_URL = f"https://www.reddit.com/r/{SUBREDDIT}/new.json?limit=25"
 USER_AGENT = "reddit-keyword-notifier/1.0 (by u/yourusername)"
-EMAIL_SUBJECT = "Red Rising book news!"
+ISSUE_LABEL = "reddit-alert"
 
 
 def fetch_new_posts():
@@ -61,29 +56,38 @@ def matches_keywords(post):
     return [kw for kw in KEYWORDS if kw.lower() in combined]
 
 
-def send_sms(body):
-    gmail_address = os.environ["GMAIL_ADDRESS"]
-    gmail_app_password = os.environ["GMAIL_APP_PASSWORD"]
-    to_phone_number = os.environ["TO_PHONE_NUMBER"]  # 10 digits, e.g. 5551234567
+def create_github_issue(title, body):
+    """Create a GitHub Issue in the current repo, assigned to the repo owner."""
+    token = os.environ["GITHUB_TOKEN"]
+    repo_full_name = os.environ["GITHUB_REPOSITORY"]  # auto-set by Actions, e.g. "owner/repo"
+    owner = repo_full_name.split("/")[0]
 
-    to_address = f"{to_phone_number}@{VERIZON_SMS_GATEWAY}"
+    url = f"https://api.github.com/repos/{repo_full_name}/issues"
+    payload = {
+        "title": title,
+        "body": body,
+        "labels": [ISSUE_LABEL],
+        "assignees": [owner],
+    }
 
-    # Carrier gateways truncate long messages, so keep it tight and skip a subject line
-    short_body = body[:MAX_SMS_LENGTH]
-
-    msg = MIMEText(short_body)
-    msg["From"] = gmail_address
-    msg["To"] = to_address
-    msg["Subject"] = EMAIL_SUBJECT
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": USER_AGENT,
+            "Content-Type": "application/json",
+        },
+    )
 
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
-            server.starttls()
-            server.login(gmail_address, gmail_app_password)
-            server.sendmail(gmail_address, [to_address], msg.as_string())
-        print(f"SMS sent: {short_body}")
-    except smtplib.SMTPException as e:
-        print(f"Gmail SMTP error: {e}", file=sys.stderr)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        print(f"Created issue #{data['number']}: {data['html_url']}")
+    except urllib.error.HTTPError as e:
+        print(f"GitHub API error {e.code}: {e.read().decode()}", file=sys.stderr)
         raise
 
 
@@ -94,7 +98,7 @@ def main():
     new_seen_ids = set(seen_ids)
     notified_count = 0
 
-    # Process oldest-first so notifications arrive in chronological order
+    # Process oldest-first so issues are created in chronological order
     for child in reversed(posts):
         post = child["data"]
         post_id = post["id"]
@@ -108,12 +112,18 @@ def main():
         if matched:
             title = post.get("title", "(no title)")
             permalink = f"https://redd.it/{post_id}"
-            body = f"r/{SUBREDDIT}: {title} {permalink}"
-            send_sms(body)
+            issue_title = f"Red Rising book news! - {title}"
+            issue_body = (
+                f"**Matched keyword(s):** {', '.join(matched)}\n\n"
+                f"**Post:** {title}\n\n"
+                f"**Link:** {permalink}\n\n"
+                f"_Subreddit: r/{SUBREDDIT}_"
+            )
+            create_github_issue(issue_title, issue_body)
             notified_count += 1
 
     save_seen_ids(new_seen_ids)
-    print(f"Checked {len(posts)} posts, sent {notified_count} notification(s).")
+    print(f"Checked {len(posts)} posts, created {notified_count} issue(s).")
 
 
 if __name__ == "__main__":
