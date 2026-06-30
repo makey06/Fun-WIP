@@ -8,6 +8,7 @@ two issues. Uses the automatically-provided GITHUB_TOKEN and GITHUB_REPOSITORY
 env vars that every Actions run has access to -- no extra secrets needed.
 """
 
+import base64
 import json
 import os
 import sys
@@ -19,15 +20,48 @@ KEYWORDS = ["red god", "release date"]
 SEEN_FILE = "seen_posts.json"
 MAX_SEEN_HISTORY = 300  # how many post IDs to remember, to keep the file small
 
-REDDIT_URL = f"https://www.reddit.com/r/{SUBREDDIT}/new.json?limit=25"
-USER_AGENT = "reddit-keyword-notifier/1.0 (by u/yourusername)"
+REDDIT_OAUTH_TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
+REDDIT_API_URL = f"https://oauth.reddit.com/r/{SUBREDDIT}/new?limit=25"
+USER_AGENT = "redrising-keyword-notifier/1.0 (by /u/yourusername)"
 ISSUE_LABEL = "reddit-alert"
 ERROR_LABEL = "reddit-notifier-error"
 
 
+def get_reddit_access_token():
+    """
+    Get a short-lived OAuth token using Reddit's client_credentials grant.
+    This is the "app-only" flow -- it only needs a client ID/secret (no
+    Reddit username/password) and is sufficient for reading public posts.
+    """
+    client_id = os.environ["REDDIT_CLIENT_ID"]
+    client_secret = os.environ["REDDIT_CLIENT_SECRET"]
+
+    auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    req = urllib.request.Request(
+        REDDIT_OAUTH_TOKEN_URL,
+        data=b"grant_type=client_credentials",
+        method="POST",
+        headers={
+            "Authorization": f"Basic {auth}",
+            "User-Agent": USER_AGENT,
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return data["access_token"]
+
+
 def fetch_new_posts():
-    """Fetch the newest posts from the subreddit's public JSON feed."""
-    req = urllib.request.Request(REDDIT_URL, headers={"User-Agent": USER_AGENT})
+    """Fetch the newest posts from the subreddit via Reddit's official OAuth API."""
+    token = get_reddit_access_token()
+    req = urllib.request.Request(
+        REDDIT_API_URL,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": USER_AGENT,
+        },
+    )
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     return data["data"]["children"]
