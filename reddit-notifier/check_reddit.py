@@ -22,6 +22,7 @@ MAX_SEEN_HISTORY = 300  # how many post IDs to remember, to keep the file small
 REDDIT_URL = f"https://www.reddit.com/r/{SUBREDDIT}/new.json?limit=25"
 USER_AGENT = "reddit-keyword-notifier/1.0 (by u/yourusername)"
 ISSUE_LABEL = "reddit-alert"
+ERROR_LABEL = "reddit-notifier-error"
 
 
 def fetch_new_posts():
@@ -56,7 +57,7 @@ def matches_keywords(post):
     return [kw for kw in KEYWORDS if kw.lower() in combined]
 
 
-def create_github_issue(title, body):
+def create_github_issue(title, body, labels=None):
     """Create a GitHub Issue in the current repo, assigned to the repo owner."""
     token = os.environ["GITHUB_TOKEN"]
     repo_full_name = os.environ["GITHUB_REPOSITORY"]  # auto-set by Actions, e.g. "owner/repo"
@@ -66,7 +67,7 @@ def create_github_issue(title, body):
     payload = {
         "title": title,
         "body": body,
-        "labels": [ISSUE_LABEL],
+        "labels": labels if labels is not None else [ISSUE_LABEL],
         "assignees": [owner],
     }
 
@@ -127,4 +128,18 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        tb = traceback.format_exc()
+        print(tb, file=sys.stderr)
+        try:
+            create_github_issue(
+                "Reddit notifier script error",
+                f"The reddit-notifier script failed with an unhandled exception:\n\n```\n{tb}\n```",
+                labels=[ERROR_LABEL],
+            )
+        except Exception as inner:
+            print(f"Also failed to report the error as an issue: {inner}", file=sys.stderr)
+        sys.exit(1)
