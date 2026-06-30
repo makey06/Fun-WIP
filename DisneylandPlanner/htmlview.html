@@ -3,11 +3,86 @@
 <head>
   <meta charset="UTF-8" />
   <title>Disneyland Trip Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide icons as React components are not available via CDN, so we use SVGs or fallback to emoji/icons -->
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F3E9D2;
+      background-image: radial-gradient(circle, rgba(43,36,32,0.06) 1px, transparent 1px);
+      background-size: 18px 18px;
+    }
+    .font-display { font-family: 'Bungee', cursive; }
+    .font-ticket { font-family: 'Space Mono', monospace; }
+
+    .marquee-lights {
+      height: 12px;
+      background-image: radial-gradient(circle, #F3E9D2 3.5px, transparent 4px);
+      background-size: 26px 12px;
+      background-repeat: repeat-x;
+      background-position: center;
+    }
+
+    .ticket-stub {
+      position: relative;
+      border: 2px solid #2B2420;
+      border-radius: 10px;
+      background: #FBF6E9;
+    }
+    .ticket-stub::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 64px;
+      width: 0;
+      border-left: 2px dashed #C9952C;
+    }
+    .ticket-stub::after {
+      content: '';
+      position: absolute;
+      left: 64px;
+      top: -8px;
+      width: 16px;
+      height: 16px;
+      background: #F3E9D2;
+      border: 2px solid #2B2420;
+      border-radius: 50%;
+      transform: translateX(-9px);
+    }
+    .ticket-stub-bottom::before {
+      content: '';
+      position: absolute;
+      left: 64px;
+      bottom: -8px;
+      width: 16px;
+      height: 16px;
+      background: #F3E9D2;
+      border: 2px solid #2B2420;
+      border-radius: 50%;
+      transform: translateX(-9px);
+    }
+
+    .ticket-letter {
+      font-family: 'Bungee', cursive;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FBF6E9;
+      font-size: 20px;
+      border: 2px solid #2B2420;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
@@ -23,6 +98,18 @@ const Utensils = () => <span role="img" aria-label="utensils">🍽️</span>;
 const Star = () => <span role="img" aria-label="star">⭐</span>;
 const ChevronDown = () => <span>▼</span>;
 const ChevronUp = () => <span>▲</span>;
+
+// Maps each attraction's intensity type to a classic Disneyland A-E ticket
+// letter and its associated badge color, mirroring the real 1955-1982
+// ticket book system (A = mildest, E = most thrilling).
+const TICKET_LETTERS = {
+  'Family': { letter: 'A', color: '#6B8F71' },
+  'Family Thrill': { letter: 'C', color: '#C9952C' },
+  'Adventure': { letter: 'C', color: '#C9952C' },
+  'Thrill': { letter: 'D', color: '#BB2649' },
+  'Epic': { letter: 'E', color: '#7A1530' }
+};
+const getTicket = (type) => TICKET_LETTERS[type] || { letter: 'B', color: '#4F7C82' };
 
 function DisneylandTripPlanner() {
   const [startDate, setStartDate] = React.useState('');
@@ -175,28 +262,40 @@ function DisneylandTripPlanner() {
   }, [optimizeDay, dateRange, dailyParks]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-pink-100 p-6">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-3xl font-bold mb-6 text-center text-pink-700 flex items-center justify-center gap-2">
-          <MapPin /> Disneyland Trip Planner
-        </h1>
+    <div className="min-h-screen p-4 md:p-8">
+      <div className="max-w-4xl mx-auto bg-[#FBF6E9] rounded-2xl shadow-xl overflow-hidden border-2 border-[#2B2420]">
+
+        {/* Marquee Header */}
+        <div className="bg-[#BB2649] pt-3">
+          <div className="marquee-lights"></div>
+          <div className="px-6 py-8 text-center">
+            <p className="font-ticket text-[#F3E9D2] tracking-[0.3em] text-xs mb-3">ADMIT ONE · FAMILY ITINERARY</p>
+            <h1 className="font-display text-2xl md:text-4xl text-[#F3E9D2] leading-snug flex items-center justify-center gap-3">
+              <MapPin /> Disneyland Trip Planner
+            </h1>
+          </div>
+          <div className="marquee-lights"></div>
+        </div>
+
+        <div className="p-6 md:p-10">
+
         {/* Trip Details */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-6 mb-10">
           <div>
-            <label className="block mb-2 font-semibold"><Calendar /> Start Date</label>
-            <input type="date" className="w-full border rounded p-2" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            <label className="block mb-2 font-semibold text-[#2B2420] flex items-center gap-1"><Calendar /> Start Date</label>
+            <input type="date" className="w-full border-2 border-[#2B2420] rounded-lg p-2 font-ticket bg-white focus:outline-none focus:ring-2 focus:ring-[#C9952C]" value={startDate} onChange={e => setStartDate(e.target.value)} />
           </div>
           <div>
-            <label className="block mb-2 font-semibold"><Calendar /> End Date</label>
-            <input type="date" className="w-full border rounded p-2" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            <label className="block mb-2 font-semibold text-[#2B2420] flex items-center gap-1"><Calendar /> End Date</label>
+            <input type="date" className="w-full border-2 border-[#2B2420] rounded-lg p-2 font-ticket bg-white focus:outline-none focus:ring-2 focus:ring-[#C9952C]" value={endDate} onChange={e => setEndDate(e.target.value)} />
           </div>
           <div>
-            <label className="block mb-2 font-semibold"><Users /> Adults</label>
-            <input type="number" min="1" className="w-full border rounded p-2" value={adults} onChange={e => setAdults(Number(e.target.value))} />
+            <label className="block mb-2 font-semibold text-[#2B2420] flex items-center gap-1"><Users /> Adults</label>
+            <input type="number" min="1" className="w-full border-2 border-[#2B2420] rounded-lg p-2 font-ticket bg-white focus:outline-none focus:ring-2 focus:ring-[#C9952C]" value={adults} onChange={e => setAdults(Number(e.target.value))} />
           </div>
           <div>
-            <label className="block mb-2 font-semibold"><Baby /> Children</label>
-            <input type="number" min="0" className="w-full border rounded p-2" value={children} onChange={e => setChildren(Number(e.target.value))} />
+            <label className="block mb-2 font-semibold text-[#2B2420] flex items-center gap-1"><Baby /> Children</label>
+            <input type="number" min="0" className="w-full border-2 border-[#2B2420] rounded-lg p-2 font-ticket bg-white focus:outline-none focus:ring-2 focus:ring-[#C9952C]" value={children} onChange={e => setChildren(Number(e.target.value))} />
             {children > 0 && (
               <div className="mt-2 space-y-2">
                 {Array.from({ length: children }).map((_, idx) => (
@@ -206,7 +305,7 @@ function DisneylandTripPlanner() {
                     min="0"
                     max="17"
                     placeholder={`Child ${idx + 1} Age`}
-                    className="w-full border rounded p-2"
+                    className="w-full border-2 border-[#2B2420] rounded-lg p-2 font-ticket bg-white focus:outline-none focus:ring-2 focus:ring-[#C9952C]"
                     value={childAges[idx] || ''}
                     onChange={e => {
                       const ages = [...childAges];
@@ -222,17 +321,17 @@ function DisneylandTripPlanner() {
 
         {/* Park Selection */}
         {dateRange.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center"><MapPin /> Select Park for Each Day</h2>
+          <div className="mb-10">
+            <h2 className="font-display text-lg text-[#BB2649] mb-4 flex items-center gap-2"><MapPin /> Select Park for Each Day</h2>
             <div className="grid md:grid-cols-2 gap-4">
-              {dateRange.map(date => (
-                <div key={date} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+              {dateRange.map((date, idx) => (
+                <div key={date} className={`ticket-stub p-4 pl-20 flex items-center justify-between ${idx % 2 === 0 ? '-rotate-1' : 'rotate-1'}`}>
                   <div>
-                    <div className="font-semibold">{date}</div>
+                    <div className="font-ticket text-sm font-bold text-[#2B2420]">{date}</div>
                   </div>
                   <div>
                     <select
-                      className="border rounded p-2"
+                      className="border-2 border-[#2B2420] rounded-lg p-2 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#C9952C]"
                       value={dailyParks[date] || ''}
                       onChange={e => handleParkSelection(date, e.target.value)}
                     >
@@ -250,9 +349,9 @@ function DisneylandTripPlanner() {
 
         {/* Optimize Button */}
         {dateRange.length > 0 && Object.values(dailyParks).filter(Boolean).length === dateRange.length && (
-          <div className="mb-8 text-center">
+          <div className="mb-10 text-center">
             <button
-              className="bg-pink-600 text-white px-6 py-2 rounded-lg font-semibold shadow hover:bg-pink-700 transition"
+              className="font-display bg-[#2F4A3E] text-[#F3E9D2] px-8 py-3 rounded-lg text-sm tracking-wide shadow-md hover:bg-[#23362c] transition border-2 border-[#2B2420]"
               onClick={() => setOptimizeDay(true)}
             >
               <Clock /> Optimize My Disney Days!
@@ -262,28 +361,35 @@ function DisneylandTripPlanner() {
 
         {/* Schedules */}
         {optimizeDay && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 flex items-center"><Clock /> Daily Schedules</h2>
+          <div className="mb-10">
+            <h2 className="font-display text-lg text-[#BB2649] mb-4 flex items-center gap-2"><Clock /> Daily Schedules</h2>
             {dateRange.map(date => (
               <div key={date} className="mb-6">
                 <div
-                  className="flex items-center justify-between cursor-pointer bg-blue-50 p-4 rounded-lg"
+                  className="flex items-center justify-between cursor-pointer bg-[#2F4A3E] text-[#F3E9D2] p-4 rounded-lg border-2 border-[#2B2420]"
                   onClick={() => toggleScheduleExpansion(date)}
                 >
                   <div>
-                    <span className="font-semibold">{date}</span>
-                    <span className="ml-2 text-gray-600">{dailyParks[date]}</span>
+                    <span className="font-ticket font-bold">{date}</span>
+                    <span className="ml-2 opacity-80">{dailyParks[date]}</span>
                   </div>
                   {expandedSchedule[date] ? <ChevronUp /> : <ChevronDown />}
                 </div>
                 {expandedSchedule[date] && schedules[date] && (
-                  <div className="bg-white border rounded-lg p-4 mt-2">
-                    <ul className="space-y-2">
-                      {schedules[date].map((ride, idx) => (
-                        <li key={idx} className="flex items-center gap-2">
-                          <Star /> <span className="font-semibold">{ride.time}</span> - {ride.name} <span className="text-gray-500 text-sm">({ride.wait} wait, {ride.type}, Height: {ride.height})</span>
-                        </li>
-                      ))}
+                  <div className="bg-[#FBF6E9] border-2 border-t-0 border-[#2B2420] rounded-b-lg p-4 mt-0">
+                    <ul className="space-y-3">
+                      {schedules[date].map((ride, idx) => {
+                        const ticket = getTicket(ride.type);
+                        return (
+                          <li key={idx} className="flex items-center gap-3 bg-white rounded-lg border-2 border-[#2B2420] p-3">
+                            <div className="ticket-letter" style={{ backgroundColor: ticket.color }}>{ticket.letter}</div>
+                            <div className="flex-1">
+                              <div className="font-semibold text-[#2B2420]">{ride.name}</div>
+                              <div className="font-ticket text-xs text-[#2B2420] opacity-70">{ride.time} · {ride.wait} wait · {ride.type} · Height: {ride.height}</div>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
@@ -293,39 +399,39 @@ function DisneylandTripPlanner() {
         )}
 
         {/* Dining Recommendations */}
-        <div className="mb-8 bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center">
-            <Utensils className="mr-2 text-red-600" />
+        <div className="mb-10 bg-[#EFE3C5] p-6 rounded-xl border-2 border-[#2B2420]">
+          <h2 className="font-display text-lg text-[#BB2649] mb-5 flex items-center gap-2">
+            <Utensils />
             Dining Recommendations
           </h2>
           {parks.map((park) => (
-            <div key={park} className="mb-6">
-              <h3 className="text-xl font-semibold mb-3 text-gray-800">{park}</h3>
+            <div key={park} className="mb-6 last:mb-0">
+              <h3 className="font-ticket font-bold text-sm tracking-wide mb-3 text-[#2B2420] uppercase">{park}</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 {diningLocations[park]?.map((location) => {
                   const isExpanded = expandedDining[location.name];
                   return (
-                    <div key={location.name} className="bg-white border rounded-lg overflow-hidden">
+                    <div key={location.name} className="ticket-stub ticket-stub-bottom overflow-hidden">
                       <div 
-                        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                        className="p-4 pl-20 cursor-pointer hover:bg-[#F3E9D2] transition-colors"
                         onClick={() => toggleDiningExpansion(location.name)}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-800">{location.name}</h4>
-                            <p className="text-sm text-gray-600">{location.type} • {location.cuisine}</p>
+                            <h4 className="font-semibold text-[#2B2420]">{location.name}</h4>
+                            <p className="font-ticket text-xs text-[#2B2420] opacity-70 mt-1">{location.type} · {location.cuisine}</p>
                           </div>
                           {isExpanded ? <ChevronUp /> : <ChevronDown />}
                         </div>
                       </div>
                       
                       {isExpanded && (
-                        <div className="px-4 pb-4 border-t">
-                          <h5 className="font-medium text-gray-700 mb-2 mt-3">Popular Items:</h5>
-                          <ul className="text-sm text-gray-600 space-y-1">
+                        <div className="px-4 pb-4 pl-20 border-t-2 border-dashed border-[#C9952C]">
+                          <h5 className="font-semibold text-[#2B2420] mb-2 mt-3 text-sm">Popular Items</h5>
+                          <ul className="font-ticket text-xs text-[#2B2420] space-y-1.5">
                             {location.popular.map((item, index) => (
-                              <li key={index} className="flex items-center">
-                                <Star className="h-3 w-3 text-yellow-500 mr-2" />
+                              <li key={index} className="flex items-center gap-2">
+                                <Star />
                                 {item}
                               </li>
                             ))}
@@ -342,28 +448,28 @@ function DisneylandTripPlanner() {
 
         {/* Summary */}
         {dateRange.length > 0 && (
-          <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-lg">
-            <h2 className="text-2xl font-semibold mb-4 text-purple-800">Trip Summary</h2>
+          <div className="bg-[#2F4A3E] p-6 md:p-8 rounded-xl border-2 border-[#2B2420]">
+            <h2 className="font-display text-lg text-[#F3E9D2] mb-5">Trip Summary</h2>
             <div className="grid md:grid-cols-3 gap-4 text-center">
-              <div className="bg-white p-4 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{dateRange.length}</div>
-                <div className="text-gray-600">Days at Disney</div>
+              <div className="bg-[#FBF6E9] p-4 rounded-lg border-2 border-[#2B2420]">
+                <div className="font-display text-2xl text-[#BB2649]">{dateRange.length}</div>
+                <div className="font-ticket text-xs text-[#2B2420] mt-1 uppercase">Days at Disney</div>
               </div>
-              <div className="bg-white p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{adults + children}</div>
-                <div className="text-gray-600">Total Guests</div>
+              <div className="bg-[#FBF6E9] p-4 rounded-lg border-2 border-[#2B2420]">
+                <div className="font-display text-2xl text-[#BB2649]">{adults + children}</div>
+                <div className="font-ticket text-xs text-[#2B2420] mt-1 uppercase">Total Guests</div>
               </div>
-              <div className="bg-white p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
+              <div className="bg-[#FBF6E9] p-4 rounded-lg border-2 border-[#2B2420]">
+                <div className="font-display text-2xl text-[#BB2649]">
                   {Object.values(dailyParks).filter(park => park === 'Disneyland Park').length + 
                    Object.values(dailyParks).filter(park => park === 'Disney California Adventure').length}
                 </div>
-                <div className="text-gray-600">Park Days Planned</div>
+                <div className="font-ticket text-xs text-[#2B2420] mt-1 uppercase">Park Days Planned</div>
               </div>
             </div>
             {optimizeDay && (
-              <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
-                <p className="text-yellow-800 text-center">
+              <div className="mt-5 p-4 bg-[#C9952C] rounded-lg border-2 border-[#2B2420]">
+                <p className="font-ticket text-xs text-[#2B2420] text-center leading-relaxed">
                   ✨ Your optimized schedules are ready! Each day includes strategic ride timing, 
                   dining recommendations, and break periods for the ultimate Disney experience.
                 </p>
@@ -371,6 +477,7 @@ function DisneylandTripPlanner() {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
