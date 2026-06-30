@@ -1,0 +1,43 @@
+name: Check Reddit for keyword matches
+
+on:
+  schedule:
+    # Runs every 6 hours (UTC)
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}  # lets you manually trigger a run from the Actions tab
+
+permissions:
+  contents: write  # needed so the workflow can commit updated seen_posts.json
+
+jobs:
+  check-reddit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: reddit-notifier
+        run: pip install -r requirements.txt
+
+      - name: Run checker
+        working-directory: reddit-notifier
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          TO_PHONE_NUMBER: ${{ secrets.TO_PHONE_NUMBER }}
+        run: python check_reddit.py
+
+      - name: Commit updated seen_posts.json
+        working-directory: reddit-notifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_posts.json
+          git diff --quiet --cached || git commit -m "Update seen posts [skip ci]"
+          git push
