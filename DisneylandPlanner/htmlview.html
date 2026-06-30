@@ -116,8 +116,9 @@ function DisneylandTripPlanner() {
     ]
   };
 
-  // Helper to generate date range
-  const generateDateRange = () => {
+  // Helper to generate date range (memoized so it only recalculates when the
+  // actual start/end dates change, instead of returning a new array on every render)
+  const dateRange = React.useMemo(() => {
     if (!startDate || !endDate) return [];
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -128,9 +129,7 @@ function DisneylandTripPlanner() {
       current.setDate(current.getDate() + 1);
     }
     return range;
-  };
-
-  const dateRange = generateDateRange();
+  }, [startDate, endDate]);
 
   // Handle child ages
   React.useEffect(() => {
