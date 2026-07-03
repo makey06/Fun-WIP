@@ -1,146 +1,375 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fun WIP - Mike Akey</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fun WIP — Mike Akey</title>
+<style>
+  :root {
+    --bg: #f6f3ea;
+    --bg-grid: rgba(30, 26, 20, 0.05);
+    --paper: #fffdf8;
+    --ink: #221f1a;
+    --ink-soft: #6b6355;
+    --accent: #d9622b;
+    --accent-ink: #ffffff;
+    --pin: #2f7d6b;
+    --rule: rgba(34, 31, 26, 0.14);
+    --shadow: rgba(34, 31, 26, 0.16);
+    --tape: rgba(217, 98, 43, 0.22);
+  }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0f1419;
-            color: #e1e8ed;
-            min-height: 100vh;
-            padding: 40px 20px;
-        }
+  html[data-theme="dark"] {
+    --bg: #15130f;
+    --bg-grid: rgba(255, 250, 240, 0.045);
+    --paper: #1e1b15;
+    --ink: #f1ece0;
+    --ink-soft: #9c9384;
+    --accent: #e8874a;
+    --accent-ink: #1a1410;
+    --pin: #59b39a;
+    --rule: rgba(241, 236, 224, 0.14);
+    --shadow: rgba(0, 0, 0, 0.5);
+    --tape: rgba(232, 135, 74, 0.18);
+  }
 
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
-        }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
+  body {
+    font-family: 'Iowan Old Style', 'Georgia', 'Times New Roman', serif;
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+      var(--bg);
+    background-size: 28px 28px, 28px 28px, auto;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 56px 20px 40px;
+    transition: background-color 0.35s ease, color 0.35s ease;
+  }
 
-        header h1 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1d9bf0;
-            margin-bottom: 8px;
-        }
+  .container { max-width: 680px; margin: 0 auto; }
 
-        header p {
-            color: #8b98a5;
-            font-size: 15px;
-        }
+  /* ---- Theme toggle ---- */
+  .toggle-wrap {
+    position: fixed;
+    top: 22px;
+    right: 22px;
+    z-index: 10;
+  }
 
-        .project-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+  .theme-toggle {
+    appearance: none;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px var(--shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
 
-        .project-card {
-            background: rgba(21, 32, 43, 0.95);
-            border: 1px solid rgba(56, 68, 77, 0.5);
-            border-radius: 16px;
-            padding: 20px 24px;
-            text-decoration: none;
-            color: #e1e8ed;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
+  .theme-toggle:hover { transform: translateY(-2px) rotate(-8deg); }
+  .theme-toggle:active { transform: translateY(0) rotate(0deg) scale(0.94); }
+  .theme-toggle svg { width: 22px; height: 22px; }
 
-        .project-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(29, 155, 240, 0.5);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
-        }
+  .icon-sun, .icon-moon {
+    position: absolute;
+    transition: opacity 0.25s ease, transform 0.4s ease;
+  }
+  html[data-theme="light"] .icon-moon,
+  html[data-theme="dark"] .icon-sun {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  html[data-theme="light"] .icon-sun,
+  html[data-theme="dark"] .icon-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
 
-        .project-info h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1d9bf0;
-            margin-bottom: 4px;
-        }
+  /* ---- Header ---- */
+  header {
+    margin-bottom: 46px;
+    position: relative;
+    padding-bottom: 22px;
+  }
 
-        .project-info p {
-            font-size: 13px;
-            color: #8b98a5;
-        }
+  .eyebrow {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pin);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
 
-        .arrow {
-            font-size: 20px;
-            color: #1d9bf0;
-        }
+  .eyebrow::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--pin);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pin) 20%, transparent);
+  }
 
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #8b98a5;
-            font-size: 13px;
-        }
+  header h1 {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
 
-        footer a {
-            color: #1d9bf0;
-            text-decoration: none;
-        }
-    </style>
+  header h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  header p {
+    color: var(--ink-soft);
+    font-size: 16px;
+    max-width: 46ch;
+    line-height: 1.5;
+  }
+
+  header::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 64px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ---- Index label row ---- */
+  .index-label {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 6px 10px;
+    border-bottom: 1px dashed var(--rule);
+    margin-bottom: 22px;
+  }
+
+  /* ---- Project cards (index-card style) ---- */
+  .project-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .project-card {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 22px 24px;
+    text-decoration: none;
+    color: var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 0 var(--rule), 0 10px 24px -14px var(--shadow);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+
+  .project-card::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 26px;
+    width: 34px;
+    height: 16px;
+    background: var(--tape);
+    border: 1px solid var(--rule);
+    transform: rotate(-3deg);
+  }
+
+  .project-card:nth-child(even)::before { left: auto; right: 26px; transform: rotate(3deg); }
+
+  .project-card:hover {
+    transform: translateY(-3px) rotate(-0.3deg);
+    border-color: var(--accent);
+    box-shadow: 0 2px 0 var(--accent), 0 16px 30px -16px var(--shadow);
+  }
+
+  .card-index {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    min-width: 22px;
+  }
+
+  .project-info { flex: 1; }
+
+  .project-info h2 {
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--pin);
+    flex-shrink: 0;
+  }
+
+  .project-info p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .arrow {
+    font-size: 18px;
+    color: var(--accent);
+    transition: transform 0.22s ease;
+    flex-shrink: 0;
+  }
+
+  .project-card:hover .arrow { transform: translateX(4px); }
+
+  /* ---- Footer ---- */
+  footer {
+    text-align: center;
+    margin-top: 52px;
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+  }
+
+  footer a:hover { border-bottom-color: var(--accent); }
+
+  @media (max-width: 480px) {
+    header h1 { font-size: 34px; }
+    .project-card { padding: 18px; }
+    .toggle-wrap { top: 16px; right: 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  .theme-toggle:focus-visible,
+  .project-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎉 Fun WIP</h1>
-            <p>Fun side projects and idea dumping ground</p>
-        </header>
+  <div class="toggle-wrap">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark mode" title="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="4.2"></circle>
+        <path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"></path>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.5 14.6c-1 .4-2 .6-3.1.6-4.7 0-8.6-3.9-8.6-8.6 0-1.4.3-2.7.9-3.9C6.1 3.9 3.5 7.5 3.5 11.8c0 5.1 4.1 9.2 9.2 9.2 3.9 0 7.2-2.4 8.6-5.8-.3-.2-.6-.4-.8-.6z"></path>
+      </svg>
+    </button>
+  </div>
 
-        <div class="project-grid">
-            <a class="project-card" href="Babysitting/BabysittingApp.html">
-                <div class="project-info">
-                    <h2>Babysitting Schedule</h2>
-                    <p>Live schedule app with time tracking and CSV import</p>
-                </div>
-                <span class="arrow">→</span>
-            </a>
+  <div class="container">
+    <header>
+      <div class="eyebrow">Personal archive &middot; updated often</div>
+      <h1>Fun <em>WIP</em></h1>
+      <p>A running catalog of side projects, half-finished ideas, and things built for the fun of building them.</p>
+    </header>
 
-            <a class="project-card" href="DisneylandPlanner/htmlview.html">
-                <div class="project-info">
-                    <h2>Disneyland Trip Planner</h2>
-                    <p>Plan out a Disneyland trip itinerary</p>
-                </div>
-                <span class="arrow">→</span>
-            </a>
-
-            <a class="project-card" href="Surveys/AZSurvey.html">
-                <div class="project-info">
-                    <h2>AZ Survey</h2>
-                    <p>Interactive survey form</p>
-                </div>
-                <span class="arrow">→</span>
-            </a>
-
-            <a class="project-card" href="ToDoCalendar/ToDoCalendar_v1.html">
-                <div class="project-info">
-                    <h2>To-Do Calendar</h2>
-                    <p>Calendar-based task and to-do tracker</p>
-                </div>
-                <span class="arrow">→</span>
-            </a>
-        </div>
-
-        <footer>
-            <p>Built by <a href="https://makey06.github.io/Resume/">Mike Akey</a></p>
-        </footer>
+    <div class="index-label">
+      <span>Project</span>
+      <span>Open →</span>
     </div>
+
+    <div class="project-grid">
+      <a class="project-card" href="Babysitting/BabysittingApp.html">
+        <span class="card-index">01</span>
+        <div class="project-info">
+          <h2><span class="status-dot"></span>Babysitting Schedule</h2>
+          <p>Live schedule app with time tracking and CSV import</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+
+      <a class="project-card" href="DisneylandPlanner/htmlview.html">
+        <span class="card-index">02</span>
+        <div class="project-info">
+          <h2><span class="status-dot"></span>Disneyland Trip Planner</h2>
+          <p>Plan out a Disneyland trip itinerary</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+
+      <a class="project-card" href="Surveys/AZSurvey.html">
+        <span class="card-index">03</span>
+        <div class="project-info">
+          <h2><span class="status-dot"></span>AZ Survey</h2>
+          <p>Interactive survey form</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+
+      <a class="project-card" href="ToDoCalendar/ToDoCalendar_v1.html">
+        <span class="card-index">04</span>
+        <div class="project-info">
+          <h2><span class="status-dot"></span>To-Do Calendar</h2>
+          <p>Calendar-based task and to-do tracker</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+
+    <footer>
+      <p>Built by <a href="https://makey06.github.io/Resume/">Mike Akey</a></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var toggle = document.getElementById('themeToggle');
+      var stored = localStorage.getItem('theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var initial = stored || (prefersDark ? 'dark' : 'light');
+      root.setAttribute('data-theme', initial);
+
+      toggle.addEventListener('click', function () {
+        var current = root.getAttribute('data-theme');
+        var next = current === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+    })();
+  </script>
 </body>
 </html>
