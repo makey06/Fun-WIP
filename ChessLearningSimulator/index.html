@@ -316,13 +316,21 @@ input:checked + .slider::before { transform: translateX(18px); }
   justify-content: center;
   font-size: min(9vw, 46px);
   line-height: 1;
-  cursor: pointer;
+  cursor: grab;
   pointer-events: auto;
   user-select: none;
+  touch-action: none;
+  z-index: 1;
   transition: left 0.32s cubic-bezier(0.2, 0.7, 0.3, 1), top 0.32s cubic-bezier(0.2, 0.7, 0.3, 1), transform 0.15s ease, opacity 0.3s ease;
   filter: drop-shadow(0 6px 6px rgba(0,0,0,0.35));
 }
 .piece:hover { transform: translateY(-3px) scale(1.06); }
+.piece.piece-dragging {
+  transition: none;
+  z-index: 20;
+  cursor: grabbing;
+  filter: drop-shadow(0 16px 16px rgba(0,0,0,0.45));
+}
 .piece.captured-fade { opacity: 0; transform: scale(0.4) translateY(10px); }
 
 .piece-w {
@@ -361,9 +369,53 @@ input:checked + .slider::before { transform: translateX(18px); }
   background: var(--accent-soft);
   border-radius: 4px;
 }
+.hint.hint-hover-square::after {
+  width: 100%; height: 100%;
+  background: var(--accent-soft);
+  opacity: 0.55;
+  border-radius: 4px;
+}
 .hint.hint-check::after {
   width: 92%; height: 92%;
   background: radial-gradient(circle, rgba(195,74,61,0.75), transparent 70%);
+}
+
+/* ===== Piece strategy tooltip (info bubble) ===== */
+.piece-tooltip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 60;
+  background: var(--panel);
+  border: 1.5px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  max-width: 220px;
+  text-align: left;
+  color: var(--ink);
+  box-shadow: 0 14px 30px -12px var(--shadow);
+}
+.piece-tooltip.visible { opacity: 1; }
+.piece-tooltip.below { transform: translate(-50%, 0%); }
+.piece-tooltip::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: var(--accent) transparent transparent transparent;
+}
+.piece-tooltip.below::after {
+  bottom: auto;
+  top: -6px;
+  border-width: 0 6px 6px 6px;
+  border-color: transparent transparent var(--accent) transparent;
 }
 
 /* ===== Side panel ===== */
@@ -591,6 +643,11 @@ input:checked + .slider::before { transform: translateX(18px); }
           <span id="turnBadge" class="turn-badge turn-w">White to move</span>
         </div>
         <div id="statusText"></div>
+      </div>
+
+      <div class="panel-box">
+        <div class="field-label" style="margin-bottom:8px;">💡 Strategy Tip</div>
+        <div id="tipText" style="font-size: 13px; line-height: 1.5; color: var(--ink);"></div>
       </div>
 
       <div class="panel-box">
@@ -1154,6 +1211,52 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
   };
   const PIECE_LETTER = { N:'N', B:'B', R:'R', Q:'Q', K:'K' };
 
+  const PIECE_TIPS = {
+    P: "Pawns form your structure. Advance them together, and avoid isolated or doubled pawns when you can.",
+    N: "Knights love a central outpost. On the rim, they're far less powerful — a knight on the rim is dim.",
+    B: "Bishops want open diagonals. One blocked in by its own pawns is called a \"bad bishop.\"",
+    R: "Rooks belong on open files and the 7th/2nd rank, where they attack pawns and cut off the enemy king.",
+    Q: "Your most powerful piece — but don't bring her out too early, or she'll get chased around and cost you tempo.",
+    K: "Castle early to tuck your king away safely. In the endgame, though, the king becomes a fighting piece."
+  };
+  const CHECK_TIP = "You're in check! You must block the check, capture the checking piece, or move your king to safety.";
+  const OPENING_TIPS = [
+    "Control the center with your pawns (e4/d4 or e5/d5) before anything else.",
+    "Develop your knights and bishops before moving the same piece twice.",
+    "Castle early — a king stuck in the center is a common way to lose material.",
+    "Don't bring your queen out too soon; it can be attacked and cost you tempo.",
+    "Connect your rooks by clearing the pieces between them."
+  ];
+  const MIDDLEGAME_TIPS = [
+    "Look for tactics: pins, forks, and skewers can win material outright.",
+    "Improve your worst-placed piece before starting an attack.",
+    "Trade pieces when you're ahead in material; avoid trades when you're behind.",
+    "Check for hanging pieces — yours and your opponent's — before every move.",
+    "Rooks are best on open files — look for one to seize."
+  ];
+  const ENDGAME_TIPS = [
+    "Activate your king — it's a strong piece once most others are traded off.",
+    "Push your passed pawns; they only get more dangerous with fewer pieces on the board.",
+    "In king-and-pawn endgames, the opposition (facing kings) is often decisive.",
+    "Rooks belong behind passed pawns, yours or your opponent's."
+  ];
+
+  function computeContextualTip() {
+    if (ChessEngine.isInCheck(state, state.turn)) return CHECK_TIP;
+    const nonKingCount = state.board.filter(p => p && ChessEngine.typeOf(p) !== 'K').length;
+    let pool;
+    if (nonKingCount <= 10) pool = ENDGAME_TIPS;
+    else if (state.fullmove <= 8) pool = OPENING_TIPS;
+    else pool = MIDDLEGAME_TIPS;
+    const idx = state.fullmove % pool.length;
+    return pool[idx];
+  }
+
+  function renderContextualTip() {
+    const el = document.getElementById('tipText');
+    if (el) el.textContent = computeContextualTip();
+  }
+
   let state = null;
   let mode = null;          // 'practice' | 'bot' | '2p'
   let difficulty = 'medium';
@@ -1168,6 +1271,9 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
   let pieceEls = {};        // square -> element
   let gameOver = false;
   let botThinking = false;
+  let hoveredSquare = null;
+  let dragState = null;
+  let tooltipEl = null;
 
   const setupScreen = document.getElementById('setupScreen');
   const gameScreen = document.getElementById('gameScreen');
@@ -1265,6 +1371,9 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
     const { left, top } = coordsForSquare(square);
     el.style.left = left + '%';
     el.style.top = top + '%';
+    el.addEventListener('pointerdown', (e) => onPiecePointerDown(e, parseInt(el.dataset.square, 10)));
+    el.addEventListener('mouseenter', () => onPieceHoverEnter(el));
+    el.addEventListener('mouseleave', () => onPieceHoverLeave());
     piecesLayer.appendChild(el);
     pieceEls[square] = el;
     return el;
@@ -1320,6 +1429,18 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
         seen.add(m.to);
         addHint(m.to, m.capture ? 'hint-capture' : 'hint-move');
       });
+    } else if (hoveredSquare !== null && humanCanMoveNow()) {
+      const hoveredPiece = state.board[hoveredSquare];
+      if (hoveredPiece && ChessEngine.colorOf(hoveredPiece) === state.turn) {
+        addHint(hoveredSquare, 'hint-hover-square');
+        const moves = ChessEngine.legalMovesForSquare(state, hoveredSquare);
+        const seen = new Set();
+        moves.forEach(m => {
+          if (seen.has(m.to)) return;
+          seen.add(m.to);
+          addHint(m.to, m.capture ? 'hint-capture' : 'hint-move');
+        });
+      }
     }
 
     // Check indicator
@@ -1435,6 +1556,160 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
     }
   }
 
+  // ===== Piece pointer interaction: click-to-move AND drag-to-move =====
+  function onPiecePointerDown(e, square) {
+    if (gameOver) return;
+    const piece = state.board[square];
+    if (!piece) return;
+    if (!humanCanMoveNow()) return;
+
+    if (selectedSquare !== null) {
+      const moves = ChessEngine.legalMovesForSquare(state, selectedSquare);
+      const candidates = moves.filter(m => m.to === square);
+      if (candidates.length > 0) {
+        e.preventDefault();
+        if (candidates.length > 1) openPromotionModal(candidates);
+        else commitMove(candidates[0]);
+        return;
+      }
+      if (ChessEngine.colorOf(piece) === state.turn) {
+        selectedSquare = square;
+        renderHints();
+        beginDragTracking(e, square);
+        return;
+      }
+      selectedSquare = null;
+      renderHints();
+      return;
+    }
+
+    if (ChessEngine.colorOf(piece) !== state.turn) return;
+    selectedSquare = square;
+    renderHints();
+    beginDragTracking(e, square);
+  }
+
+  function beginDragTracking(e, square) {
+    const el = pieceEls[square];
+    if (!el) return;
+    dragState = { square, el, startX: e.clientX, startY: e.clientY, moved: false, pointerId: e.pointerId };
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    el.addEventListener('pointermove', onDragMove);
+    el.addEventListener('pointerup', onDragEnd);
+    el.addEventListener('pointercancel', onDragEnd);
+  }
+
+  function onDragMove(e) {
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
+    const dx = e.clientX - dragState.startX, dy = e.clientY - dragState.startY;
+    if (!dragState.moved && Math.hypot(dx, dy) > 5) {
+      dragState.moved = true;
+      dragState.el.classList.add('piece-dragging');
+      hideTooltip();
+    }
+    if (dragState.moved) {
+      const rect = boardEl.getBoundingClientRect();
+      let xFrac = (e.clientX - rect.left) / rect.width;
+      let yFrac = (e.clientY - rect.top) / rect.height;
+      xFrac = Math.min(0.999, Math.max(0, xFrac));
+      yFrac = Math.min(0.999, Math.max(0, yFrac));
+      const leftPct = Math.min(87.5, Math.max(0, xFrac * 100 - 6.25));
+      const topPct = Math.min(87.5, Math.max(0, yFrac * 100 - 6.25));
+      dragState.el.style.left = leftPct + '%';
+      dragState.el.style.top = topPct + '%';
+    }
+  }
+
+  function squareFromClientPos(clientX, clientY) {
+    const rect = boardEl.getBoundingClientRect();
+    let xFrac = (clientX - rect.left) / rect.width;
+    let yFrac = (clientY - rect.top) / rect.height;
+    xFrac = Math.min(0.999, Math.max(0, xFrac));
+    yFrac = Math.min(0.999, Math.max(0, yFrac));
+    const Lf = Math.floor(xFrac * 8);
+    const Lt = Math.floor(yFrac * 8);
+    let f, r;
+    if (!flipped) { f = Lf; r = 7 - Lt; } else { f = 7 - Lf; r = Lt; }
+    return ChessEngine.sq(f, r);
+  }
+
+  function onDragEnd(e) {
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
+    const { square, el, moved } = dragState;
+    el.removeEventListener('pointermove', onDragMove);
+    el.removeEventListener('pointerup', onDragEnd);
+    el.removeEventListener('pointercancel', onDragEnd);
+    try { el.releasePointerCapture(e.pointerId); } catch (err) {}
+    el.classList.remove('piece-dragging');
+
+    if (moved) {
+      const targetSquare = squareFromClientPos(e.clientX, e.clientY);
+      if (targetSquare !== square) {
+        const moves = ChessEngine.legalMovesForSquare(state, square);
+        const candidates = moves.filter(m => m.to === targetSquare);
+        if (candidates.length > 0) {
+          dragState = null;
+          if (candidates.length > 1) openPromotionModal(candidates);
+          else commitMove(candidates[0]);
+          return;
+        }
+      }
+      const { left, top } = coordsForSquare(square);
+      el.style.left = left + '%';
+      el.style.top = top + '%';
+    }
+    dragState = null;
+  }
+
+  // ===== Hover: preview moves + strategy tooltip =====
+  function onPieceHoverEnter(el) {
+    const square = parseInt(el.dataset.square, 10);
+    const piece = state.board[square];
+    if (!piece) return;
+    showTooltip(el, piece);
+    if (selectedSquare === null) {
+      hoveredSquare = square;
+      renderHints();
+    }
+  }
+
+  function onPieceHoverLeave() {
+    hideTooltip();
+    if (hoveredSquare !== null) {
+      hoveredSquare = null;
+      renderHints();
+    }
+  }
+
+  function ensureTooltip() {
+    if (!tooltipEl) {
+      tooltipEl = document.createElement('div');
+      tooltipEl.className = 'piece-tooltip';
+      document.body.appendChild(tooltipEl);
+    }
+    return tooltipEl;
+  }
+
+  function showTooltip(pieceEl, piece) {
+    const tip = ensureTooltip();
+    const type = ChessEngine.typeOf(piece);
+    tip.textContent = PIECE_TIPS[type] || '';
+    const rect = pieceEl.getBoundingClientRect();
+    tip.style.left = (rect.left + rect.width / 2) + 'px';
+    if (rect.top < 90) {
+      tip.style.top = (rect.bottom + 14) + 'px';
+      tip.classList.add('below');
+    } else {
+      tip.style.top = (rect.top - 14) + 'px';
+      tip.classList.remove('below');
+    }
+    tip.classList.add('visible');
+  }
+
+  function hideTooltip() {
+    if (tooltipEl) tooltipEl.classList.remove('visible');
+  }
+
   function openPromotionModal(candidates) {
     promoModal.classList.add('visible');
     const color = state.turn;
@@ -1528,6 +1803,7 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
     renderMoveLog();
     renderCaptured();
     updateStatusText();
+    renderContextualTip();
 
     const status = ChessEngine.gameStatus(state);
     if (status.over) {
@@ -1572,6 +1848,9 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
   function newGameState() {
     state = ChessEngine.initialState();
     selectedSquare = null;
+    hoveredSquare = null;
+    dragState = null;
+    hideTooltip();
     historyStack = [];
     capturedByWhite = [];
     capturedByBlack = [];
@@ -1591,6 +1870,7 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
     renderMoveLog();
     renderCaptured();
     updateStatusText();
+    renderContextualTip();
     setupScreen.classList.remove('active');
     gameScreen.classList.add('active');
 
@@ -1611,6 +1891,9 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
       moveLog.pop();
     }
     selectedSquare = null;
+    hoveredSquare = null;
+    dragState = null;
+    hideTooltip();
     // Rebuild captured lists from scratch by replaying is simplest & safest
     recomputeCapturedFromLog();
     renderFullBoard();
@@ -1618,6 +1901,7 @@ if (typeof window !== 'undefined') window.ChessBot = ChessBotAPI;
     renderMoveLog();
     renderCaptured();
     updateStatusText();
+    renderContextualTip();
   }
 
   function recomputeCapturedFromLog() {
