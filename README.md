@@ -14,6 +14,7 @@ https://makey06.github.io/Fun-WIP/
 | `DisneylandPlanner/` | A Disneyland trip planner for organizing an itinerary, with a standalone HTML view and a React/TSX version. |
 | `Surveys/` | A simple interactive survey form (AZ Survey). |
 | `ToDoCalendar/` | A task management app with an integrated school calendar viewer (SUSD). Supports tagging, filtering, notes, and tracking completed tasks. Stores data locally in the browser, no backend required. |
+| `ChessLearningSimulator/` | A full chess game and learning tool in a single HTML file. Practice mode, vs-computer with adjustable difficulty, or local two-player, plus a learning mode that highlights every legal move on the board. |
 
 ## Deployment
 
