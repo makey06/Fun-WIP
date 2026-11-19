@@ -10,7 +10,6 @@ https://makey06.github.io/Fun-WIP/
 
 | Folder | Description |
 |--------|-------------|
-| `Babysitting/` | A live schedule app that displays a babysitting itinerary with real-time progress tracking. Supports loading data straight from GitHub or uploading a local CSV. |
 | `DisneylandPlanner/` | A Disneyland trip planner for organizing an itinerary, with a standalone HTML view and a React/TSX version. |
 | `Surveys/` | A simple interactive survey form (AZ Survey). |
 | `ToDoCalendar/` | A task management app with an integrated school calendar viewer (SUSD). Supports tagging, filtering, notes, and tracking completed tasks. Stores data locally in the browser, no backend required. |
